@@ -1,0 +1,68 @@
+# Netlify Configuration for Marketing Basics Simulator
+
+[build]
+  # Build command
+  command = "npm run build"
+  
+  # Directory with the production build files
+  publish = "dist"
+  
+  # Environment variables (set these in Netlify dashboard)
+  # VITE_GROQ_API_KEY = "your_groq_api_key_here"
+
+[build.environment]
+  # Node version
+  NODE_VERSION = "18"
+
+# Redirect rules for SPA routing
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Headers for security and performance
+[[headers]]
+  for = "/*"
+  [headers.values]
+    # Security headers
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    X-XSS-Protection = "1; mode=block"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "geolocation=(), microphone=(), camera=()"
+    
+    # Cache control for static assets
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    # Don't cache the main HTML file
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/*.js"
+  [headers.values]
+    # JavaScript files with versioned names can be cached
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/*.css"
+  [headers.values]
+    # CSS files with versioned names can be cached
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# Error pages
+[[redirects]]
+  from = "/404"
+  to = "/index.html"
+  status = 404
+
+# Optimize images
+[[plugins]]
+  package = "@netlify/plugin-lighthouse"
+
+# Functions directory (if needed in future)
+[functions]
+  directory = "netlify/functions"
+
