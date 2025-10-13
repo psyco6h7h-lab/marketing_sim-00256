@@ -6,6 +6,7 @@ import { calculateLevel } from '../utils/xpCalculations';
 import ProgressRing from '../components/ProgressRing';
 import LevelBadge from '../components/LevelBadge';
 import { BookOpen, FlaskConical, Target, Gem, Package, DollarSign, Megaphone, Zap } from '../components/icons/Icons';
+import { useResponsive } from '../hooks/useResponsive';
 import type { Module } from '../types';
 
 const modules: Omit<Module, 'id'>[] = [
@@ -27,6 +28,7 @@ const Dashboard: React.FC = () => {
     const unlockedAchievements = useAppStore((state) => state.unlockedAchievements);
     const activities = useAppStore((state) => state.activities);
     const moduleDetails = useAppStore((state) => state.moduleDetails);
+    const { isMobile } = useResponsive();
     
     const levelInfo = calculateLevel(totalXP);
     
@@ -120,8 +122,11 @@ const Dashboard: React.FC = () => {
                     {/* Overall Progress */}
                     <div className="bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-xl sm:rounded-2xl shadow-lg flex flex-col items-center justify-center">
                         <h2 className="text-lg sm:text-xl font-semibold font-heading mb-3 sm:mb-4">Overall Progress</h2>
-                        <ProgressRing progress={totalProgress} size={120} strokeWidth={10} className="sm:hidden" />
-                        <ProgressRing progress={totalProgress} size={150} strokeWidth={12} className="hidden sm:block" />
+                        <ProgressRing 
+                            progress={totalProgress} 
+                            size={isMobile ? 120 : 150} 
+                            strokeWidth={isMobile ? 10 : 12} 
+                        />
                         <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-3 sm:mt-4 text-center">
                             {completedModules} of {modules.length} modules completed
                         </p>

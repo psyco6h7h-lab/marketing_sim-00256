@@ -87,8 +87,8 @@ const SegmentationLab: React.FC = () => {
     
     // Custom Persona Creation Functions
     const handleCreatePersona = () => {
-        if (Object.values(customPersona).some((value: any) => !value.trim())) {
-            setError('Please fill in all fields');
+        if (!customPersona.name.trim()) {
+            setError('Please provide at least a persona name');
             return;
         }
         

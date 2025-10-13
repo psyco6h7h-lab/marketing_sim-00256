@@ -219,8 +219,9 @@ const PromotionLab: React.FC = () => {
       return;
     }
 
-    if (!productName || !targetMarket || calculateTotalBudget() !== 100) {
-      setError('Please complete all required fields and ensure budget totals 100%');
+    // Make fields optional - provide feedback even with partial data
+    if (calculateTotalBudget() === 0) {
+      setError('Please allocate some budget to get AI feedback');
       return;
     }
     
@@ -236,14 +237,16 @@ const PromotionLab: React.FC = () => {
       );
     
     const prompt = `Analyze this promotional campaign strategy:
-    Product: ${productName}
-    Target Market: ${targetMarket}
-    Campaign Objective: ${objective}
+    Product: ${productName || 'Not specified'}
+    Target Market: ${targetMarket || 'Not specified'}
+    Campaign Objective: ${objective || 'Not specified'}
     Total Budget: $${totalBudget}
     Campaign Duration: ${campaignDuration} months
     Budget Allocation: Advertising ${budgets.advertising}%, Public Relations ${budgets.publicRelations}%, Sales Promotion ${budgets.salesPromotion}%, Personal Selling ${budgets.personalSelling}%, Direct Marketing ${budgets.directMarketing}%
     Selected Tactics: ${selectedTacticsList.join(', ')}
     Estimated Reach Score: ${calculateReach().toFixed(1)}/3
+    
+    Note: Some fields may be incomplete. Provide feedback based on available information and suggest what additional data would be helpful.
     
     Return ONLY valid JSON with these exact fields:
     {

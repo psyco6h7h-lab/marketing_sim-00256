@@ -146,8 +146,8 @@ const TargetingLab: React.FC = () => {
   
   // Custom Segment Creation Functions
   const handleCreateCustomSegment = () => {
-    if (Object.values(customSegment).some((value: any) => !value.trim())) {
-      setError('Please fill in all fields');
+    if (!customSegment.name.trim()) {
+      setError('Please provide at least a segment name');
       return;
     }
     

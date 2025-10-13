@@ -128,8 +128,9 @@ const PricingLab: React.FC = () => {
       return;
     }
 
-    if (!productName || !targetMarket || !selectedStrategy || finalPrice === 0) {
-      setError('Please complete all required fields and select a pricing strategy');
+    // Make all fields optional - provide feedback even with partial data
+    if (!selectedStrategy) {
+      setError('Please select a pricing strategy to get AI feedback');
       return;
     }
     
@@ -137,10 +138,10 @@ const PricingLab: React.FC = () => {
     setError(null);
     
     const prompt = `Analyze this pricing strategy:
-    Product: ${productName}
-    Target Market: ${targetMarket}
+    Product: ${productName || 'Not specified'}
+    Target Market: ${targetMarket || 'Not specified'}
     Quality Level: ${qualityLevel}/100
-    Positioning: ${positioning}
+    Positioning: ${positioning || 'Not specified'}
     Fixed Costs: $${costs.fixedCosts}
     Variable Costs: $${costs.variableCosts}
     Total Cost per Unit: $${totalCost.toFixed(2)}
@@ -149,6 +150,8 @@ const PricingLab: React.FC = () => {
     Profit Margin: ${profitMargin.toFixed(1)}%
     Break-Even Quantity: ${breakEvenQty} units
     Psychological Pricing: ${Object.entries(psychologicalPricing).filter(([_, v]) => v).map(([k]) => k).join(', ') || 'None'}
+    
+    Note: Some fields may be incomplete. Provide feedback based on available information and suggest what additional data would be helpful.
     
     Return ONLY valid JSON with these exact fields:
     {

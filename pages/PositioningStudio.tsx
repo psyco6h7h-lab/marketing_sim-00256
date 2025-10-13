@@ -135,8 +135,9 @@ const PositioningStudio: React.FC = () => {
       return;
     }
 
-    if (!isComplete) {
-      setError('Please complete all positioning statement fields before analyzing');
+    // Make all fields optional - provide feedback even with partial data
+    if (!positioning.targetAudience && !positioning.benefit && !positioning.differentiator) {
+      setError('Please fill in at least some positioning information to get AI feedback');
       return;
     }
     
@@ -144,7 +145,7 @@ const PositioningStudio: React.FC = () => {
     setError(null);
     setFeedback(null);
     
-    const statement = `For ${positioning.targetMarket} who ${positioning.need}, ${positioning.product} is a ${positioning.category} that ${positioning.benefit}. Unlike ${positioning.competitor}, we ${positioning.differentiator}.`;
+    const statement = `For ${positioning.targetMarket || 'target market'} who ${positioning.need || 'have needs'}, ${positioning.product || 'our product'} is a ${positioning.category || 'product category'} that ${positioning.benefit || 'provides benefits'}. Unlike ${positioning.competitor || 'competitors'}, we ${positioning.differentiator || 'offer unique value'}.`;
     
     const prompt = `
       Evaluate this positioning statement: "${statement}"
