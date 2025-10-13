@@ -29,40 +29,22 @@ const Toast: React.FC = () => {
             transition={{ type: 'spring', stiffness: 300, damping: 25 }}
             className="relative"
           >
-            {notification.type === 'xp' && (
-              <div className="bg-gradient-to-r from-coral-500 to-coral-600 text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-3">
-                <Sparkles className="w-5 h-5" />
+            {notification.type === 'error' && (
+              <div className="bg-gradient-to-r from-red-500 to-red-600 text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-3">
+                <span className="text-xl">⚠️</span>
                 <div>
-                  <p className="font-semibold">+{notification.data.amount} XP</p>
-                  <p className="text-xs opacity-90">{notification.data.source}</p>
+                  <p className="font-semibold">Error</p>
+                  <p className="text-sm">{notification.data.message}</p>
                 </div>
               </div>
             )}
             
-            {notification.type === 'level' && (
-              <div className="bg-gradient-to-r from-warm-yellow-400 to-warm-yellow-500 text-slate-900 px-4 py-3 rounded-lg shadow-lg">
-                <motion.div
-                  animate={{ scale: [1, 1.2, 1] }}
-                  transition={{ duration: 0.5 }}
-                  className="flex items-center gap-3"
-                >
-                  <span className="text-2xl">🎉</span>
-                  <div>
-                    <p className="font-bold text-lg">Level Up!</p>
-                    <p className="text-sm">You reached Level {notification.data.level}</p>
-                  </div>
-                </motion.div>
-              </div>
-            )}
-            
-            {notification.type === 'achievement' && (
-              <div className="bg-gradient-to-r from-deep-blue-500 to-deep-blue-600 text-white px-4 py-3 rounded-lg shadow-lg">
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl">{notification.data.icon}</span>
-                  <div>
-                    <p className="font-semibold">Achievement Unlocked!</p>
-                    <p className="text-sm">{notification.data.title}</p>
-                  </div>
+            {notification.type === 'success' && (
+              <div className="bg-gradient-to-r from-green-500 to-green-600 text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-3">
+                <span className="text-xl">✅</span>
+                <div>
+                  <p className="font-semibold">Success</p>
+                  <p className="text-sm">{notification.data.message}</p>
                 </div>
               </div>
             )}
@@ -78,47 +60,10 @@ const Toast: React.FC = () => {
         ))}
       </AnimatePresence>
       
-      {/* Confetti for level up */}
-      <AnimatePresence>
-        {notifications.some(n => n.type === 'level') && <Confetti />}
-      </AnimatePresence>
     </div>
   );
 };
 
-// Simple confetti effect
-const Confetti: React.FC = () => {
-  const colors = ['#ff6d4d', '#facc15', '#4fabf7', '#ff8f72'];
-  const confettiPieces = Array.from({ length: 50 });
-  
-  return (
-    <div className="fixed inset-0 pointer-events-none z-40">
-      {confettiPieces.map((_, i) => (
-        <motion.div
-          key={i}
-          className="absolute w-2 h-2 rounded-full"
-          style={{
-            backgroundColor: colors[Math.floor(Math.random() * colors.length)],
-            left: `${Math.random() * 100}%`,
-            top: '-10px',
-          }}
-          initial={{ y: 0, opacity: 1, rotate: 0 }}
-          animate={{
-            y: window.innerHeight + 100,
-            opacity: 0,
-            rotate: Math.random() * 720,
-            x: (Math.random() - 0.5) * 200,
-          }}
-          transition={{
-            duration: 2 + Math.random() * 2,
-            ease: 'easeIn',
-            delay: Math.random() * 0.3,
-          }}
-        />
-      ))}
-    </div>
-  );
-};
 
 export default Toast;
 

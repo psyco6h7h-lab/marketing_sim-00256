@@ -4,8 +4,12 @@ import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 
 import { useAppStore } from './store/useStore';
+import { AuthProvider } from './src/contexts/AuthContext';
+import { ProtectedRoute } from './components/ProtectedRoute';
 import Layout from './components/Layout';
 import Toast from './components/Toast';
+import Login from './pages/Login';
+import Signup from './pages/Signup';
 import Dashboard from './pages/Dashboard';
 import LearnMarketing from './pages/LearnMarketing';
 import TheoryPage from './pages/TheoryPage';
@@ -16,7 +20,6 @@ import PositioningStudio from './pages/PositioningStudio';
 import ProductStrategyLab from './pages/ProductStrategyLab';
 import PricingLab from './pages/PricingLab';
 import PromotionLab from './pages/PromotionLab';
-import Profile from './pages/Profile';
 import SalesChallenge from './pages/SalesChallenge';
 
 function App() {
@@ -37,30 +40,100 @@ function App() {
   }, [updateStreak]);
 
   return (
-    <HashRouter>
-      <Layout>
+    <AuthProvider>
+      <HashRouter>
         <Toast />
         <AnimatePresence mode="wait">
           <Routes>
+            {/* Public Routes */}
+            <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<Signup />} />
+            
+            {/* Protected Routes */}
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/dashboard" element={<AnimatedPage><Dashboard /></AnimatedPage>} />
-            <Route path="/marketing-basics" element={<AnimatedPage><LearnMarketing /></AnimatedPage>} />
-            <Route path="/theory/:topicId" element={<AnimatedPage><TheoryPage /></AnimatedPage>} />
-            <Route path="/marketing-quiz" element={<AnimatedPage><MarketingQuiz /></AnimatedPage>} />
-            <Route path="/segmentation-lab" element={<AnimatedPage><SegmentationLab /></AnimatedPage>} />
-            <Route path="/targeting-lab" element={<AnimatedPage><TargetingLab /></AnimatedPage>} />
-            <Route path="/positioning-studio" element={<AnimatedPage><PositioningStudio /></AnimatedPage>} />
-            <Route path="/product-strategy" element={<AnimatedPage><ProductStrategyLab /></AnimatedPage>} />
-            <Route path="/pricing-lab" element={<AnimatedPage><PricingLab /></AnimatedPage>} />
-            <Route path="/promotion-lab" element={<AnimatedPage><PromotionLab /></AnimatedPage>} />
-            <Route path="/sales-challenge" element={<AnimatedPage><SalesChallenge /></AnimatedPage>} />
-            <Route path="/profile" element={<AnimatedPage><Profile /></AnimatedPage>} />
+            <Route path="/dashboard" element={
+              <ProtectedRoute>
+                <Layout>
+                  <AnimatedPage><Dashboard /></AnimatedPage>
+                </Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/marketing-basics" element={
+              <ProtectedRoute>
+                <Layout>
+                  <AnimatedPage><LearnMarketing /></AnimatedPage>
+                </Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/theory/:topicId" element={
+              <ProtectedRoute>
+                <Layout>
+                  <AnimatedPage><TheoryPage /></AnimatedPage>
+                </Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/marketing-quiz" element={
+              <ProtectedRoute>
+                <Layout>
+                  <AnimatedPage><MarketingQuiz /></AnimatedPage>
+                </Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/segmentation-lab" element={
+              <ProtectedRoute>
+                <Layout>
+                  <AnimatedPage><SegmentationLab /></AnimatedPage>
+                </Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/targeting-lab" element={
+              <ProtectedRoute>
+                <Layout>
+                  <AnimatedPage><TargetingLab /></AnimatedPage>
+                </Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/positioning-studio" element={
+              <ProtectedRoute>
+                <Layout>
+                  <AnimatedPage><PositioningStudio /></AnimatedPage>
+                </Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/product-strategy" element={
+              <ProtectedRoute>
+                <Layout>
+                  <AnimatedPage><ProductStrategyLab /></AnimatedPage>
+                </Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/pricing-lab" element={
+              <ProtectedRoute>
+                <Layout>
+                  <AnimatedPage><PricingLab /></AnimatedPage>
+                </Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/promotion-lab" element={
+              <ProtectedRoute>
+                <Layout>
+                  <AnimatedPage><PromotionLab /></AnimatedPage>
+                </Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/sales-challenge" element={
+              <ProtectedRoute>
+                <Layout>
+                  <AnimatedPage><SalesChallenge /></AnimatedPage>
+                </Layout>
+              </ProtectedRoute>
+            } />
             {/* Redirect old route to new */}
             <Route path="/marketing-101" element={<Navigate to="/marketing-basics" replace />} />
           </Routes>
         </AnimatePresence>
-      </Layout>
-    </HashRouter>
+      </HashRouter>
+    </AuthProvider>
   );
 }
 

@@ -6,7 +6,7 @@ import { Sparkles, RotateCw } from '../components/icons/Icons';
 import LabNavigation from '../components/LabNavigation';
 
 const groq = new Groq({ 
-  apiKey: import.meta.env.VITE_GROQ_API_KEY,
+  apiKey: import.meta.env.VITE_GROQ_API_KEY || '',
   dangerouslyAllowBrowser: true 
 });
 
@@ -186,8 +186,8 @@ const PromotionLab: React.FC = () => {
     });
   };
   
-  const calculateTotalBudget = () => {
-    return Object.values(budgets).reduce((sum, budget) => sum + budget, 0);
+  const calculateTotalBudget = (): number => {
+    return (Object.values(budgets) as number[]).reduce((sum: number, budget: number) => sum + budget, 0);
   };
   
   const calculateReach = () => {
@@ -198,7 +198,7 @@ const PromotionLab: React.FC = () => {
       const channelBudget = budgets[channel as keyof ChannelBudget];
       const channelWeight = channelBudget / totalBudget;
       
-      tacticIds.forEach(tacticId => {
+      (tacticIds as string[]).forEach(tacticId => {
         const tactic = tactics[channel].find(t => t.id === tacticId);
         if (tactic) {
           const reachValue = tactic.reach === 'High' ? 3 : tactic.reach === 'Medium' ? 2 : 1;
@@ -213,7 +213,7 @@ const PromotionLab: React.FC = () => {
   
   const handleAnalyze = async () => {
     // Validate API key first
-    const apiKey = (import.meta as any).env?.VITE_GROQ_API_KEY;
+    const apiKey = import.meta.env.VITE_GROQ_API_KEY;
     if (!apiKey) {
       setError('API key not configured. Please add VITE_GROQ_API_KEY to your .env file.');
       return;
@@ -229,7 +229,7 @@ const PromotionLab: React.FC = () => {
     
     const selectedTacticsList = Object.entries(selectedTactics)
       .flatMap(([channel, tacticIds]) => 
-        tacticIds.map(tacticId => {
+        (tacticIds as string[]).map(tacticId => {
           const tactic = tactics[channel].find(t => t.id === tacticId);
           return tactic ? `${tactic.name} (${channel})` : null;
         }).filter(Boolean)
@@ -334,15 +334,23 @@ const PromotionLab: React.FC = () => {
     }
   };
   
-  const totalBudgetPercentage = calculateTotalBudget();
+  const totalBudgetPercentage = calculateTotalBudget() as number;
   const isBudgetValid = Math.abs(totalBudgetPercentage - 100) < 0.1;
   
   return (
-    <div>
-      <h1 className="text-3xl font-bold font-heading mb-2">Promotion Lab</h1>
-      <p className="text-slate-500 dark:text-slate-400 mb-8">
-        Plan your promotional campaign by allocating budget across channels and selecting tactics. Get AI-powered campaign analysis.
-      </p>
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="mb-8"
+        >
+          <h1 className="text-3xl font-bold font-heading mb-2">Promotion Lab</h1>
+          <p className="text-slate-500 dark:text-slate-400 mb-8">
+            Plan your promotional campaign by allocating budget across channels and selecting tactics. Get AI-powered campaign analysis.
+          </p>
+        </motion.div>
       
       {/* Campaign Context */}
       <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg mb-8">
@@ -435,7 +443,7 @@ const PromotionLab: React.FC = () => {
           <div className={`px-3 py-1 rounded-full text-sm font-semibold ${
             isBudgetValid ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
           }`}>
-            {totalBudgetPercentage.toFixed(1)}% allocated
+            {(totalBudgetPercentage as number).toFixed(1)}% allocated
           </div>
         </div>
         
@@ -499,14 +507,14 @@ const PromotionLab: React.FC = () => {
                 <span className="text-2xl">{channel.icon}</span>
                 <h3 className="text-lg font-semibold">{channel.name}</h3>
                 <span className="text-sm text-slate-500 dark:text-slate-400">
-                  (${((budgets[channelKey as keyof ChannelBudget] / 100) * totalBudget).toFixed(0)} budget)
+                  (${((budgets[channelKey as keyof ChannelBudget] as number / 100) * totalBudget).toFixed(0)} budget)
                 </span>
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {tactics[channelKey].map(tactic => {
+                {tactics[channelKey]?.map(tactic => {
                   const isSelected = selectedTactics[channelKey]?.includes(tactic.id) || false;
-                  const canAfford = tactic.cost <= budgets[channelKey as keyof ChannelBudget];
+                  const canAfford = true; // All tactics are selectable
                   
                   return (
                     <label
@@ -548,7 +556,11 @@ const PromotionLab: React.FC = () => {
                       </div>
                     </label>
                   );
-                })}
+                }) || (
+                  <div className="col-span-full text-center py-8 text-slate-500 dark:text-slate-400">
+                    <p className="text-sm">No tactics available for this channel</p>
+                  </div>
+                )}
               </div>
             </div>
           ))}
@@ -570,7 +582,7 @@ const PromotionLab: React.FC = () => {
           <div className="bg-white dark:bg-slate-900 p-4 rounded-xl text-center">
             <div className="text-sm text-slate-600 dark:text-slate-400 mb-1">Channels Used</div>
             <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">
-              {Object.values(budgets).filter(b => b > 0).length}/5
+              {Object.values(budgets).filter(b => (b as number) > 0).length}/5
             </div>
           </div>
           
@@ -759,12 +771,13 @@ const PromotionLab: React.FC = () => {
         )}
       </AnimatePresence>
       
-      {/* Lab Navigation */}
-      <LabNavigation
-        currentLab="promotion-lab"
-        completedLabs={[]}
-        onNavigate={(lab) => window.location.hash = `#/${lab}`}
-      />
+        {/* Lab Navigation */}
+        <LabNavigation
+          currentLab="promotion-lab"
+          completedLabs={[]}
+          onNavigate={(lab) => window.location.hash = `#/${lab}`}
+        />
+      </div>
     </div>
   );
 };

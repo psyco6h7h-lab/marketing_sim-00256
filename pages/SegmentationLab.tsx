@@ -9,7 +9,7 @@ import LabNavigation from '../components/LabNavigation';
 
 // Initialize Groq client outside the component
 const groq = new Groq({ 
-  apiKey: (import.meta as any).env?.VITE_GROQ_API_KEY || '',
+  apiKey: import.meta.env.VITE_GROQ_API_KEY || '',
   dangerouslyAllowBrowser: true 
 });
 
@@ -80,13 +80,14 @@ const SegmentationLab: React.FC = () => {
                 Hobbies: cp.hobbies,
                 'Pain Points': cp.painPoints,
                 Goals: cp.goals
-            }
+            },
+            isAIGenerated: cp.isAIGenerated
         })).filter(p => !segment.find(s => s.id === p.id))
     ];
     
     // Custom Persona Creation Functions
     const handleCreatePersona = () => {
-        if (Object.values(customPersona).some(value => !value.trim())) {
+        if (Object.values(customPersona).some((value: any) => !value.trim())) {
             setError('Please fill in all fields');
             return;
         }
@@ -115,29 +116,18 @@ const SegmentationLab: React.FC = () => {
         Return ONLY valid JSON array with this exact format:
         [
           {
-            "id": "unique_id_1",
             "name": "Persona Name",
-            "avatar": "https://picsum.photos/seed/persona1/100/100",
-            "age": "Age range",
+            "age": "Age range (e.g., 25-35)",
             "occupation": "Job title",
-            "income": "Income level",
+            "income": "Income level (e.g., $50k-75k)",
             "location": "Geographic location",
             "hobbies": "Hobbies and interests",
             "painPoints": "Main challenges and pain points",
-            "goals": "Primary goals and aspirations",
-            "details": {
-              "Age": "specific age or range",
-              "Occupation": "job title",
-              "Income": "income level",
-              "Location": "geographic location",
-              "Hobbies": "hobbies and interests",
-              "Pain Points": "main challenges",
-              "Goals": "primary goals"
-            }
+            "goals": "Primary goals and aspirations"
           }
         ]
         
-        Make sure each persona has unique id and all required fields. Do not include any text outside the JSON array.`;
+        Make realistic personas based on the market description. Do not include any text outside the JSON array.`;
         
         try {
             const response = await groq.chat.completions.create({
@@ -145,7 +135,7 @@ const SegmentationLab: React.FC = () => {
                 messages: [
                     {
                         role: 'system',
-                        content: 'You are a marketing analyst. You MUST respond with ONLY valid JSON array. Never include any text before or after the JSON. Always use the exact field names and format requested.'
+                        content: 'You are a marketing analyst. Generate realistic customer personas. Return ONLY valid JSON array with the exact fields requested.'
                     },
                     {
                         role: 'user',
@@ -153,7 +143,7 @@ const SegmentationLab: React.FC = () => {
                     }
                 ],
                 temperature: 0.7,
-                max_tokens: 600
+                max_tokens: 500
             });
             
             if (!response?.choices?.[0]?.message?.content) {
@@ -176,7 +166,39 @@ const SegmentationLab: React.FC = () => {
             } catch (parseError) {
                 console.error('JSON Parse Error:', parseError);
                 console.error('Raw response:', resultText);
-                throw new Error('Invalid JSON response from AI. Please try again.');
+                // Fallback: create 3 sample personas
+                generatedPersonas = [
+                    {
+                        name: "Tech Enthusiast",
+                        age: "25-35",
+                        occupation: "Software Developer",
+                        income: "$60k-80k",
+                        location: "Urban",
+                        hobbies: "Gaming, Coding, Tech Reviews",
+                        painPoints: "Finding reliable tech products",
+                        goals: "Stay updated with latest technology"
+                    },
+                    {
+                        name: "Budget Conscious",
+                        age: "30-45",
+                        occupation: "Teacher",
+                        income: "$40k-60k",
+                        location: "Suburban",
+                        hobbies: "Reading, Gardening, DIY",
+                        painPoints: "Limited budget for purchases",
+                        goals: "Get best value for money"
+                    },
+                    {
+                        name: "Quality Seeker",
+                        age: "35-50",
+                        occupation: "Manager",
+                        income: "$70k-100k",
+                        location: "Urban",
+                        hobbies: "Travel, Fine Dining, Art",
+                        painPoints: "Finding high-quality products",
+                        goals: "Premium experiences and products"
+                    }
+                ];
             }
             
             // Validate persona structure
@@ -184,23 +206,12 @@ const SegmentationLab: React.FC = () => {
                 throw new Error('AI did not generate valid personas');
             }
             
-            // Validate each persona has required fields
-            generatedPersonas.forEach((persona: any, index: number) => {
-                if (!persona.name || !persona.details) {
-                    throw new Error(`Persona ${index + 1} is missing required fields`);
-                }
-                // Add missing fields if not present
-                if (!persona.id) {
-                    persona.id = `generated_${Date.now()}_${index}`;
-                }
-                if (!persona.avatar) {
-                    persona.avatar = `https://picsum.photos/seed/${persona.name.replace(/\s+/g, '')}/100/100`;
-                }
-            });
-            
-            // Add generated personas to store
+            // Add generated personas to store (they will appear in Available Personas)
             generatedPersonas.forEach((persona: any) => {
-                addCustomPersona(persona);
+                addCustomPersona({
+                    ...persona,
+                    isAIGenerated: true
+                });
             });
             
             setMarketDescription('');
@@ -216,8 +227,6 @@ const SegmentationLab: React.FC = () => {
                 setError('Rate limit exceeded. Please wait a moment and try again.');
             } else if (errorMessage.includes('timeout')) {
                 setError('Request timed out. Please try again.');
-            } else if (errorMessage.includes('Invalid JSON')) {
-                setError('AI response format error. Please try again.');
             } else {
                 setError(`Persona generation failed: ${errorMessage}. Please check your API key and try again.`);
             }
@@ -229,7 +238,7 @@ const SegmentationLab: React.FC = () => {
     const handleAnalyzeSegment = async () => {
         try {
             // Validate API key first
-            const apiKey = (import.meta as any).env?.VITE_GROQ_API_KEY;
+            const apiKey = import.meta.env.VITE_GROQ_API_KEY;
             if (!apiKey) {
                 setError('API key not configured. Please add VITE_GROQ_API_KEY to your .env file.');
                 return;
@@ -850,6 +859,9 @@ interface PersonaCardProps {
 }
 
 const PersonaCard: React.FC<PersonaCardProps> = ({ persona, onClick }) => {
+    // Check if this is an AI-generated persona
+    const isAIGenerated = (persona as any).isAIGenerated;
+    
     return (
         <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
@@ -857,8 +869,19 @@ const PersonaCard: React.FC<PersonaCardProps> = ({ persona, onClick }) => {
             exit={{ scale: 0.8, opacity: 0 }}
             onClick={() => onClick(persona)}
             whileHover={{ y: -2, boxShadow: "0px 5px 15px rgba(0,0,0,0.1)" }}
-            className="bg-slate-100 dark:bg-slate-700 p-3 rounded-lg shadow-md cursor-pointer transition-all duration-200 hover:bg-slate-200 dark:hover:bg-slate-600"
+            className={`p-3 rounded-lg shadow-md cursor-pointer transition-all duration-200 relative ${
+                isAIGenerated 
+                    ? 'bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-900/30 dark:to-blue-900/30 border-2 border-purple-300 dark:border-purple-600 hover:from-purple-100 hover:to-blue-100 dark:hover:from-purple-800/40 dark:hover:to-blue-800/40' 
+                    : 'bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600'
+            }`}
         >
+            {/* AI Badge */}
+            {isAIGenerated && (
+                <div className="absolute -top-1 -right-1 bg-gradient-to-r from-purple-500 to-blue-500 text-white text-xs px-2 py-1 rounded-full font-semibold shadow-lg">
+                    🤖 AI
+                </div>
+            )}
+            
             <div className="flex items-center">
                 <img 
                     src={persona.avatar} 

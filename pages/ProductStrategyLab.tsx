@@ -6,7 +6,7 @@ import { Sparkles, RotateCw } from '../components/icons/Icons';
 import LabNavigation from '../components/LabNavigation';
 
 const groq = new Groq({ 
-  apiKey: import.meta.env.VITE_GROQ_API_KEY,
+  apiKey: import.meta.env.VITE_GROQ_API_KEY || '',
   dangerouslyAllowBrowser: true 
 });
 
@@ -101,7 +101,7 @@ const ProductStrategyLab: React.FC = () => {
   
   const handleAnalyze = async () => {
     // Validate API key first
-    const apiKey = (import.meta as any).env?.VITE_GROQ_API_KEY;
+    const apiKey = import.meta.env.VITE_GROQ_API_KEY;
     if (!apiKey) {
       setError('API key not configured. Please add VITE_GROQ_API_KEY to your .env file.');
       return;

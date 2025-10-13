@@ -5,7 +5,7 @@ import { useAppStore } from '../store/useStore';
 import { Sparkles, RotateCw } from '../components/icons/Icons';
 
 const groq = new Groq({ 
-  apiKey: (import.meta as any).env?.VITE_GROQ_API_KEY || '', 
+  apiKey: import.meta.env.VITE_GROQ_API_KEY || '', 
   dangerouslyAllowBrowser: true 
 });
 

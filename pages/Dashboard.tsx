@@ -10,13 +10,13 @@ import type { Module } from '../types';
 
 const modules: Omit<Module, 'id'>[] = [
     { title: "Learn Marketing", description: "Master the fundamentals.", path: "/marketing-basics", icon: BookOpen, category: "Core Concepts" },
-    { title: "Segmentation Lab", description: "Define your ideal customers.", path: "/segmentation-lab", icon: FlaskConical, category: "Marketing Labs" },
-    { title: "Targeting Lab", description: "Choose the right segments.", path: "/targeting-lab", icon: Target, category: "Marketing Labs" },
-    { title: "Positioning Studio", description: "Craft a unique brand identity.", path: "/positioning-studio", icon: Gem, category: "Marketing Labs" },
-    { title: "Product Strategy", description: "Design your product strategy.", path: "/product-strategy", icon: Package, category: "Marketing Labs" },
-    { title: "Pricing Lab", description: "Set your pricing strategy.", path: "/pricing-lab", icon: DollarSign, category: "Marketing Labs" },
-    { title: "Promotion Lab", description: "Plan your promotional campaign.", path: "/promotion-lab", icon: Megaphone, category: "Marketing Labs" },
-    { title: "Sales Challenge", description: "Practice your sales skills.", path: "/sales-challenge", icon: Zap, category: "Practice" },
+    { title: "Segmentation Lab", description: "Define your ideal customers.", path: "/segmentation-lab", icon: FlaskConical, category: "Labs" },
+    { title: "Targeting Lab", description: "Choose the right segments.", path: "/targeting-lab", icon: Target, category: "Labs" },
+    { title: "Positioning Studio", description: "Craft a unique brand identity.", path: "/positioning-studio", icon: Gem, category: "Labs" },
+    { title: "Product Strategy", description: "Design your product strategy.", path: "/product-strategy", icon: Package, category: "Labs" },
+    { title: "Pricing Lab", description: "Set your pricing strategy.", path: "/pricing-lab", icon: DollarSign, category: "Labs" },
+    { title: "Promotion Lab", description: "Plan your promotional campaign.", path: "/promotion-lab", icon: Megaphone, category: "Labs" },
+    { title: "Sales Challenge", description: "Practice your sales skills.", path: "/sales-challenge", icon: Zap, category: "Advanced" },
 ];
 
 const Dashboard: React.FC = () => {
@@ -76,16 +76,6 @@ const Dashboard: React.FC = () => {
 
     return (
         <div>
-            <motion.div
-                className="mb-8"
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-            >
-                <h1 className="text-3xl font-bold font-heading">Welcome back, {userName}!</h1>
-                <p className="text-slate-500 dark:text-slate-400 mt-1">Here's your progress. Keep up the great work!</p>
-            </motion.div>
-            
             {/* Featured: Sales Challenge Banner */}
             <motion.div
                 initial={{ opacity: 0, y: -20 }}
@@ -106,7 +96,7 @@ const Dashboard: React.FC = () => {
                                 </div>
                                 <h2 className="text-3xl font-bold text-white mb-2">AI Sales Challenge</h2>
                                 <p className="text-white/90 text-lg mb-1">Face a brutal AI buyer. Sell ANYTHING you want.</p>
-                                <p className="text-white/80 text-sm">Practice your real products • Get instant feedback • Earn massive XP</p>
+                                <p className="text-white/80 text-sm">Practice your real products • Get instant feedback</p>
                             </div>
                             <div className="flex-shrink-0 ml-8 text-white">
                                 <div className="text-7xl mb-2 group-hover:scale-110 transition-transform">⚡</div>
@@ -119,30 +109,6 @@ const Dashboard: React.FC = () => {
                 </Link>
             </motion.div>
             
-            {/* Stats Cards */}
-            <motion.div
-                className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8"
-                variants={containerVariants}
-                initial="hidden"
-                animate="visible"
-            >
-                <motion.div variants={itemVariants} className="bg-gradient-to-br from-coral-400 to-coral-500 text-white p-4 rounded-xl shadow-lg">
-                    <p className="text-sm opacity-90 mb-1">Total XP</p>
-                    <p className="text-3xl font-bold">{totalXP.toLocaleString()}</p>
-                </motion.div>
-                <motion.div variants={itemVariants} className="bg-gradient-to-br from-deep-blue-400 to-deep-blue-500 text-white p-4 rounded-xl shadow-lg">
-                    <p className="text-sm opacity-90 mb-1">Current Level</p>
-                    <p className="text-3xl font-bold">{levelInfo.level}</p>
-                </motion.div>
-                <motion.div variants={itemVariants} className="bg-gradient-to-br from-warm-yellow-400 to-warm-yellow-500 text-slate-900 p-4 rounded-xl shadow-lg">
-                    <p className="text-sm opacity-90 mb-1">Day Streak</p>
-                    <p className="text-3xl font-bold">{streak} 🔥</p>
-                </motion.div>
-                <motion.div variants={itemVariants} className="bg-gradient-to-br from-green-400 to-green-500 text-white p-4 rounded-xl shadow-lg">
-                    <p className="text-sm opacity-90 mb-1">Achievements</p>
-                    <p className="text-3xl font-bold">{unlockedAchievements.length} 🏆</p>
-                </motion.div>
-            </motion.div>
             
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <motion.div 
@@ -157,17 +123,6 @@ const Dashboard: React.FC = () => {
                         <ProgressRing progress={totalProgress} size={150} strokeWidth={12} />
                         <p className="text-sm text-slate-500 dark:text-slate-400 mt-4">
                             {completedModules} of {modules.length} modules completed
-                        </p>
-                    </div>
-                    
-                    {/* Level Badge */}
-                    <div className="bg-gradient-to-br from-coral-500 to-warm-yellow-500 p-6 rounded-2xl shadow-lg flex flex-col items-center">
-                        <LevelBadge size="lg" showXP animated />
-                        <p className="text-white mt-4 text-sm text-center">
-                            {levelInfo.xpNeededForNextLevel > 0 
-                              ? `${levelInfo.xpNeededForNextLevel} XP to next level`
-                              : 'Max level reached!'
-                            }
                         </p>
                     </div>
                 </motion.div>
@@ -232,11 +187,6 @@ const Dashboard: React.FC = () => {
                                                 {new Date(activity.timestamp).toLocaleString()}
                                             </p>
                                         </div>
-                                        {activity.xpEarned && activity.xpEarned > 0 && (
-                                            <div className="text-right flex-shrink-0">
-                                                <p className="text-xs font-bold text-coral-500">+{activity.xpEarned}</p>
-                                            </div>
-                                        )}
                                     </motion.div>
                                 ))}
                             </div>

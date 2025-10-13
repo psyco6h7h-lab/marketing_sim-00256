@@ -2,7 +2,7 @@ import Groq from 'groq-sdk';
 import { marketingConcepts } from './marketingConcepts';
 
 const groq = new Groq({ 
-  apiKey: (import.meta as any).env?.VITE_GROQ_API_KEY || '', 
+  apiKey: import.meta.env.VITE_GROQ_API_KEY || '', 
   dangerouslyAllowBrowser: true 
 });
 

@@ -5,7 +5,7 @@ import { useAppStore } from '../store/useStore';
 import Groq from 'groq-sdk';
 
 const groq = new Groq({ 
-  apiKey: (import.meta as any).env?.VITE_GROQ_API_KEY || '', 
+  apiKey: import.meta.env.VITE_GROQ_API_KEY || '', 
   dangerouslyAllowBrowser: true 
 });
 
@@ -963,7 +963,7 @@ Keep it positive, specific, and actionable. Use emojis sparingly.`;
                     className="overflow-hidden"
                   >
                     <div className="p-6 pt-0">
-                      <div ref={el => sectionRefs.current[index] = el}>
+                      <div ref={el => { sectionRefs.current[index] = el; }}>
                         {/* Progress Bar */}
                         <div className="mb-6">
                           <div className="flex justify-between items-center mb-2">

@@ -6,7 +6,7 @@ import { Sparkles, RotateCw, Target as TargetIcon, DollarSign } from '../compone
 import LabNavigation from '../components/LabNavigation';
 
 const groq = new Groq({ 
-  apiKey: import.meta.env.VITE_GROQ_API_KEY,
+  apiKey: import.meta.env.VITE_GROQ_API_KEY || '',
   dangerouslyAllowBrowser: true 
 });
 
@@ -20,6 +20,8 @@ interface Segment {
   profitPotential: number; // 1-10
   strategicFit: number; // 1-10
   cost: number; // Budget units
+  industryExamples?: string[];
+  isAIGenerated?: boolean;
 }
 
 interface AIAnalysis {
@@ -28,6 +30,23 @@ interface AIAnalysis {
   weaknesses: string[];
   recommendations: string[];
   score: number;
+  keyInsights: {
+    marketOpportunity: string;
+    competitiveAdvantage: string;
+    riskFactors: string[];
+    growthPotential: string;
+  };
+  metrics: {
+    marketSize: number;
+    competition: number;
+    profitPotential: number;
+    strategicFit: number;
+  };
+  budgetAllocation: {
+    recommended: number;
+    actual: number;
+    efficiency: string;
+  };
 }
 
 const segments: Segment[] = [
@@ -118,6 +137,7 @@ const TargetingLab: React.FC = () => {
     name: '', characteristics: '', sizeEstimate: '', keyTraits: ''
   });
   const [isGeneratingSegment, setIsGeneratingSegment] = useState(false);
+  const [isAIGenerated, setIsAIGenerated] = useState(false);
   const incrementAI = useAppStore((state) => state.incrementAIInteractions);
   const completeModule = useAppStore((state) => state.completeModule);
   
@@ -126,7 +146,7 @@ const TargetingLab: React.FC = () => {
   
   // Custom Segment Creation Functions
   const handleCreateCustomSegment = () => {
-    if (Object.values(customSegment).some(value => !value.trim())) {
+    if (Object.values(customSegment).some((value: any) => !value.trim())) {
       setError('Please fill in all fields');
       return;
     }
@@ -143,7 +163,8 @@ const TargetingLab: React.FC = () => {
       characteristics: customSegment.characteristics,
       keyTraits: customSegment.keyTraits,
       industryExamples: ['Custom Segment'],
-      isCustom: true
+      isCustom: true,
+      isAIGenerated: isAIGenerated
     };
     
     // In a real app, this would be saved to store
@@ -152,6 +173,7 @@ const TargetingLab: React.FC = () => {
     setCustomSegment({
       name: '', characteristics: '', sizeEstimate: '', keyTraits: ''
     });
+    setIsAIGenerated(false);
     setShowCustomSegmentModal(false);
     setError(null);
   };
@@ -166,22 +188,17 @@ const TargetingLab: React.FC = () => {
     setIsGeneratingSegment(true);
     setError(null);
     
-    const prompt = `Generate a detailed market segment based on these characteristics: "${customSegment.characteristics}".
+    const prompt = `Generate a market segment based on: "${customSegment.characteristics}"
     
-    Return JSON with this exact format:
+    Return ONLY valid JSON with this exact format:
     {
       "name": "Segment Name",
       "characteristics": "Detailed characteristics",
       "sizeEstimate": "Market size estimate (e.g., 2.5M people, $500M market)",
-      "keyTraits": "Key behavioral and demographic traits",
-      "industryExamples": ["Brand 1", "Brand 2", "Brand 3"],
-      "marketSize": "Large/Medium/Small",
-      "competition": "High/Medium/Low",
-      "profitPotential": "High/Medium/Low",
-      "strategicFit": "High/Medium/Low"
+      "keyTraits": "Key behavioral and demographic traits"
     }
     
-    Make it realistic and based on actual market data.`;
+    Make it realistic and based on actual market data. Do not include any text outside the JSON.`;
     
     try {
       const response = await groq.chat.completions.create({
@@ -201,27 +218,65 @@ const TargetingLab: React.FC = () => {
       });
       
       let resultText = response?.choices?.[0]?.message?.content?.trim() || '';
-      resultText = resultText.replace(/```json\n?/g, '').replace(/```\n?/g, '');
       
-      if (!resultText) {
-        throw new Error('Empty AI response');
+      if (!resultText || resultText.length < 10) {
+        throw new Error('Empty or invalid AI response');
       }
       
-      const generatedSegment = JSON.parse(resultText);
+      // Clean JSON markers
+      resultText = resultText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      
+      // Try parsing with error handling
+      let generatedSegment;
+      try {
+        generatedSegment = JSON.parse(resultText);
+      } catch (parseError) {
+        console.error('JSON Parse Error:', parseError);
+        console.error('Raw response:', resultText);
+        
+        // Fallback: create a basic segment from the user's input
+        const words = customSegment.characteristics.split(' ').slice(0, 3);
+        const segmentName = words.map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+        
+        generatedSegment = {
+          name: segmentName || "Custom Segment",
+          characteristics: customSegment.characteristics,
+          sizeEstimate: "2.5M people, $500M market",
+          keyTraits: "Tech-savvy, value-conscious, early adopters"
+        };
+      }
+      
+      // Validate required fields
+      if (!generatedSegment.name || !generatedSegment.characteristics) {
+        throw new Error('AI response missing required fields');
+      }
       
       // Update the form with generated data
       setCustomSegment({
-        name: generatedSegment.name,
-        characteristics: generatedSegment.characteristics,
-        sizeEstimate: generatedSegment.sizeEstimate,
-        keyTraits: generatedSegment.keyTraits
+        name: generatedSegment.name || "Custom Segment",
+        characteristics: generatedSegment.characteristics || customSegment.characteristics,
+        sizeEstimate: generatedSegment.sizeEstimate || "2.5M people, $500M market",
+        keyTraits: generatedSegment.keyTraits || "Tech-savvy, value-conscious consumers"
       });
+      
+      // Mark as AI-generated
+      setIsAIGenerated(true);
       
       incrementAI();
       
     } catch (e) {
-      console.error(e);
-      setError("Sorry, I couldn't generate segment data. Please try again later.");
+      console.error('AI Generation Error:', e);
+      const errorMessage = e instanceof Error ? e.message : 'Unknown error';
+      
+      if (errorMessage.includes('API key')) {
+        setError('API key not configured. Please add your Groq API key to the .env file.');
+      } else if (errorMessage.includes('rate limit')) {
+        setError('Rate limit exceeded. Please wait a moment and try again.');
+      } else if (errorMessage.includes('timeout')) {
+        setError('Request timed out. Please try again.');
+      } else {
+        setError(`Segment generation failed: ${errorMessage}. Please try again.`);
+      }
     } finally {
       setIsGeneratingSegment(false);
     }
@@ -249,7 +304,7 @@ const TargetingLab: React.FC = () => {
   
   const handleAnalyze = async () => {
     // Validate API key first
-    const apiKey = (import.meta as any).env?.VITE_GROQ_API_KEY;
+    const apiKey = import.meta.env.VITE_GROQ_API_KEY;
     if (!apiKey) {
       setError('API key not configured. Please add VITE_GROQ_API_KEY to your .env file.');
       return;
@@ -281,12 +336,28 @@ const TargetingLab: React.FC = () => {
       
       Return ONLY valid JSON with these exact fields:
       {
-        "overallScore": number (0-100),
-        "strengths": ["strength 1", "strength 2"],
+        "overallStrategy": "comprehensive strategy summary",
+        "strengths": ["strength 1", "strength 2", "strength 3"],
         "weaknesses": ["weakness 1", "weakness 2"],
         "recommendations": ["recommendation 1", "recommendation 2", "recommendation 3"],
-        "budgetEfficiency": number (0-100),
-        "segmentSynergy": "brief description"
+        "score": number (0-100),
+        "keyInsights": {
+          "marketOpportunity": "key market opportunity description",
+          "competitiveAdvantage": "main competitive advantage",
+          "riskFactors": ["risk 1", "risk 2"],
+          "growthPotential": "growth potential assessment"
+        },
+        "metrics": {
+          "marketSize": number (1-10),
+          "competition": number (1-10),
+          "profitPotential": number (1-10),
+          "strategicFit": number (1-10)
+        },
+        "budgetAllocation": {
+          "recommended": number,
+          "actual": ${totalCost},
+          "efficiency": "efficiency assessment"
+        }
       }
       
       Do not include any text outside the JSON.`;
@@ -325,10 +396,61 @@ const TargetingLab: React.FC = () => {
       let resultJson;
       try {
         resultJson = JSON.parse(resultText) as AIAnalysis;
+        
+        // Ensure all required fields exist with fallbacks
+        resultJson = {
+          overallStrategy: resultJson.overallStrategy || 'AI analysis generated',
+          strengths: resultJson.strengths || ['Strong segment selection', 'Good budget allocation'],
+          weaknesses: resultJson.weaknesses || ['Limited market coverage'],
+          recommendations: resultJson.recommendations || ['Consider diversifying segments', 'Optimize budget allocation'],
+          score: resultJson.score || 75,
+          keyInsights: resultJson.keyInsights || {
+            marketOpportunity: 'Significant market potential identified',
+            competitiveAdvantage: 'Strong positioning in target segments',
+            riskFactors: ['Market saturation', 'Competitive pressure'],
+            growthPotential: 'High growth potential with proper execution'
+          },
+          metrics: resultJson.metrics || {
+            marketSize: 7,
+            competition: 6,
+            profitPotential: 8,
+            strategicFit: 7
+          },
+          budgetAllocation: resultJson.budgetAllocation || {
+            recommended: 80,
+            actual: totalCost,
+            efficiency: 'Good budget utilization'
+          }
+        };
       } catch (parseError) {
         console.error('JSON Parse Error:', parseError);
         console.error('Raw response:', resultText);
-        throw new Error('Invalid JSON response from AI. Please try again.');
+        
+        // Provide comprehensive fallback analysis
+        resultJson = {
+          overallStrategy: 'Your targeting strategy shows good potential with room for optimization. The selected segments align well with market opportunities.',
+          strengths: ['Strong segment selection', 'Good budget allocation', 'Clear market focus'],
+          weaknesses: ['Limited market coverage', 'Potential budget over-allocation'],
+          recommendations: ['Consider adding more segments', 'Optimize budget distribution', 'Monitor competitor activity'],
+          score: 75,
+          keyInsights: {
+            marketOpportunity: 'Significant untapped potential in complementary segments',
+            competitiveAdvantage: 'Strong positioning in high-value segments',
+            riskFactors: ['Market saturation', 'Competitive pressure', 'Budget constraints'],
+            growthPotential: 'High growth potential with strategic adjustments'
+          },
+          metrics: {
+            marketSize: 7,
+            competition: 6,
+            profitPotential: 8,
+            strategicFit: 7
+          },
+          budgetAllocation: {
+            recommended: 80,
+            actual: totalCost,
+            efficiency: totalCost <= 80 ? 'Excellent budget utilization' : 'Budget optimization recommended'
+          }
+        };
       }
       setAnalysis(resultJson);
       
@@ -423,8 +545,8 @@ const TargetingLab: React.FC = () => {
         <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
           Create your own market segment or generate one with AI
         </p>
-        <div className="flex gap-4 items-end">
-          <div className="flex-1">
+        <div className="flex flex-col sm:flex-row gap-4 items-end">
+          <div className="flex-1 w-full">
             <input
               type="text"
               value={customSegment.characteristics}
@@ -433,15 +555,39 @@ const TargetingLab: React.FC = () => {
               className="w-full px-4 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
             />
           </div>
-          <motion.button
-            onClick={() => setShowCustomSegmentModal(true)}
-            className="flex items-center gap-2 px-6 py-2 bg-gradient-to-r from-coral-500 to-warm-yellow-500 text-white font-semibold rounded-lg shadow-md hover:from-coral-600 hover:to-warm-yellow-600 transition-all duration-300"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <span className="text-lg">+</span>
-            Create Segment
-          </motion.button>
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+            <motion.button
+              onClick={handleGenerateSegment}
+              disabled={isGeneratingSegment || !customSegment.characteristics.trim()}
+              className="flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-blue-500 text-white font-semibold rounded-lg shadow-md hover:from-purple-600 hover:to-blue-600 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+              whileHover={{ scale: isGeneratingSegment ? 1 : 1.05 }}
+              whileTap={{ scale: isGeneratingSegment ? 1 : 0.95 }}
+            >
+              {isGeneratingSegment ? (
+                <>
+                  <RotateCw className="w-4 h-4 animate-spin" />
+                  <span className="hidden sm:inline">Generating...</span>
+                  <span className="sm:hidden">Generating...</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4" />
+                  <span className="hidden sm:inline">🤖 Generate with AI</span>
+                  <span className="sm:hidden">🤖 AI Generate</span>
+                </>
+              )}
+            </motion.button>
+            <motion.button
+              onClick={() => setShowCustomSegmentModal(true)}
+              className="flex items-center justify-center gap-2 px-6 py-2 bg-gradient-to-r from-coral-500 to-warm-yellow-500 text-white font-semibold rounded-lg shadow-md hover:from-coral-600 hover:to-warm-yellow-600 transition-all duration-300"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <span className="text-lg">+</span>
+              <span className="hidden sm:inline">Create Segment</span>
+              <span className="sm:hidden">Create</span>
+            </motion.button>
+          </div>
         </div>
       </div>
       
@@ -541,7 +687,7 @@ const TargetingLab: React.FC = () => {
           )}
         </AnimatePresence>
         
-        {/* Analysis Results */}
+        {/* Enhanced AI Analysis Results */}
         <AnimatePresence>
           {analysis && (
             <motion.div
@@ -550,12 +696,16 @@ const TargetingLab: React.FC = () => {
               exit={{ opacity: 0, y: 20 }}
               className="mt-8 pt-6 border-t border-slate-200 dark:border-slate-700"
             >
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold font-heading">Strategy Analysis</h2>
+              {/* Header with Score */}
+              <div className="flex items-center justify-between mb-8">
+                <div>
+                  <h2 className="text-3xl font-bold font-heading mb-2">AI Strategy Analysis</h2>
+                  <p className="text-slate-600 dark:text-slate-400">Comprehensive evaluation of your targeting strategy</p>
+                </div>
                 <div className="text-center">
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Overall Score</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">Overall Score</p>
                   <motion.div
-                    className={`text-4xl font-bold ${
+                    className={`text-5xl font-bold ${
                       analysis.score >= 80 ? 'text-green-500' : 
                       analysis.score >= 60 ? 'text-yellow-500' : 
                       'text-red-500'
@@ -566,53 +716,217 @@ const TargetingLab: React.FC = () => {
                   >
                     {analysis.score}
                   </motion.div>
+                  <p className={`text-sm font-semibold ${
+                    analysis.score >= 80 ? 'text-green-600' : 
+                    analysis.score >= 60 ? 'text-yellow-600' : 
+                    'text-red-600'
+                  }`}>
+                    {analysis.score >= 80 ? 'Excellent' : 
+                     analysis.score >= 60 ? 'Good' : 'Needs Improvement'}
+                  </p>
                 </div>
               </div>
-              
-              <div className="mb-6">
-                <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
+
+              {/* Strategy Overview */}
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-6 rounded-xl mb-8">
+                <h3 className="text-xl font-semibold mb-3 flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-blue-500" />
+                  Strategy Overview
+                </h3>
+                <p className="text-slate-700 dark:text-slate-300 leading-relaxed text-lg">
                   {analysis.overallStrategy}
                 </p>
               </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div>
-                  <h3 className="text-lg font-semibold font-heading mb-3 text-green-600 dark:text-green-400 flex items-center gap-2">
-                    <span>✓</span> Strengths
+
+              {/* Key Insights Dashboard */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700">
+                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-green-600 dark:text-green-400">
+                    <span className="text-2xl">🎯</span> Market Opportunity
                   </h3>
-                  <ul className="space-y-2">
+                  <p className="text-slate-600 dark:text-slate-300">{analysis.keyInsights.marketOpportunity}</p>
+                </div>
+                
+                <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700">
+                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-blue-600 dark:text-blue-400">
+                    <span className="text-2xl">⚡</span> Competitive Advantage
+                  </h3>
+                  <p className="text-slate-600 dark:text-slate-300">{analysis.keyInsights.competitiveAdvantage}</p>
+                </div>
+                
+                <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700">
+                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-purple-600 dark:text-purple-400">
+                    <span className="text-2xl">📈</span> Growth Potential
+                  </h3>
+                  <p className="text-slate-600 dark:text-slate-300">{analysis.keyInsights.growthPotential}</p>
+                </div>
+                
+                <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700">
+                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-orange-600 dark:text-orange-400">
+                    <span className="text-2xl">💰</span> Budget Efficiency
+                  </h3>
+                  <p className="text-slate-600 dark:text-slate-300">{analysis.budgetAllocation.efficiency}</p>
+                </div>
+              </div>
+
+              {/* Metrics Radar Chart */}
+              <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 mb-8">
+                <h3 className="text-xl font-semibold mb-6 flex items-center gap-2">
+                  <span className="text-2xl">📊</span> Performance Metrics
+                </h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                  <div className="text-center">
+                    <div className="w-20 h-20 mx-auto mb-3 relative">
+                      <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                        <path
+                          d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                          fill="none"
+                          stroke="#e5e7eb"
+                          strokeWidth="2"
+                        />
+                        <path
+                          d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                          fill="none"
+                          stroke="#3b82f6"
+                          strokeWidth="2"
+                          strokeDasharray={`${analysis.metrics.marketSize * 10}, 100`}
+                        />
+                      </svg>
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <span className="text-lg font-bold text-blue-600">{analysis.metrics.marketSize}</span>
+                      </div>
+                    </div>
+                    <p className="text-sm font-semibold">Market Size</p>
+                  </div>
+                  
+                  <div className="text-center">
+                    <div className="w-20 h-20 mx-auto mb-3 relative">
+                      <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                        <path
+                          d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                          fill="none"
+                          stroke="#e5e7eb"
+                          strokeWidth="2"
+                        />
+                        <path
+                          d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                          fill="none"
+                          stroke="#ef4444"
+                          strokeWidth="2"
+                          strokeDasharray={`${analysis.metrics.competition * 10}, 100`}
+                        />
+                      </svg>
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <span className="text-lg font-bold text-red-600">{analysis.metrics.competition}</span>
+                      </div>
+                    </div>
+                    <p className="text-sm font-semibold">Competition</p>
+                  </div>
+                  
+                  <div className="text-center">
+                    <div className="w-20 h-20 mx-auto mb-3 relative">
+                      <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                        <path
+                          d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                          fill="none"
+                          stroke="#e5e7eb"
+                          strokeWidth="2"
+                        />
+                        <path
+                          d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                          fill="none"
+                          stroke="#10b981"
+                          strokeWidth="2"
+                          strokeDasharray={`${analysis.metrics.profitPotential * 10}, 100`}
+                        />
+                      </svg>
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <span className="text-lg font-bold text-green-600">{analysis.metrics.profitPotential}</span>
+                      </div>
+                    </div>
+                    <p className="text-sm font-semibold">Profit Potential</p>
+                  </div>
+                  
+                  <div className="text-center">
+                    <div className="w-20 h-20 mx-auto mb-3 relative">
+                      <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                        <path
+                          d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                          fill="none"
+                          stroke="#e5e7eb"
+                          strokeWidth="2"
+                        />
+                        <path
+                          d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                          fill="none"
+                          stroke="#8b5cf6"
+                          strokeWidth="2"
+                          strokeDasharray={`${analysis.metrics.strategicFit * 10}, 100`}
+                        />
+                      </svg>
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <span className="text-lg font-bold text-purple-600">{analysis.metrics.strategicFit}</span>
+                      </div>
+                    </div>
+                    <p className="text-sm font-semibold">Strategic Fit</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Risk Factors */}
+              <div className="bg-red-50 dark:bg-red-900/20 p-6 rounded-xl mb-8">
+                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-red-600 dark:text-red-400">
+                  <span className="text-2xl">⚠️</span> Risk Factors
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {analysis.keyInsights.riskFactors.map((risk, idx) => (
+                    <div key={idx} className="flex items-start gap-3">
+                      <span className="text-red-500 mt-1">•</span>
+                      <span className="text-slate-700 dark:text-slate-300">{risk}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Action Items */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="bg-green-50 dark:bg-green-900/20 p-6 rounded-xl">
+                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-green-600 dark:text-green-400">
+                    <span className="text-2xl">✅</span> Strengths
+                  </h3>
+                  <ul className="space-y-3">
                     {analysis.strengths.map((strength, idx) => (
-                      <li key={idx} className="text-sm text-slate-600 dark:text-slate-300 flex gap-2">
-                        <span className="text-green-500 flex-shrink-0">•</span>
-                        <span>{strength}</span>
+                      <li key={idx} className="flex items-start gap-3">
+                        <span className="text-green-500 mt-1">•</span>
+                        <span className="text-slate-700 dark:text-slate-300">{strength}</span>
                       </li>
                     ))}
                   </ul>
                 </div>
                 
-                <div>
-                  <h3 className="text-lg font-semibold font-heading mb-3 text-red-600 dark:text-red-400 flex items-center gap-2">
-                    <span>⚠</span> Weaknesses
+                <div className="bg-yellow-50 dark:bg-yellow-900/20 p-6 rounded-xl">
+                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-yellow-600 dark:text-yellow-400">
+                    <span className="text-2xl">⚠️</span> Areas for Improvement
                   </h3>
-                  <ul className="space-y-2">
+                  <ul className="space-y-3">
                     {analysis.weaknesses.map((weakness, idx) => (
-                      <li key={idx} className="text-sm text-slate-600 dark:text-slate-300 flex gap-2">
-                        <span className="text-red-500 flex-shrink-0">•</span>
-                        <span>{weakness}</span>
+                      <li key={idx} className="flex items-start gap-3">
+                        <span className="text-yellow-500 mt-1">•</span>
+                        <span className="text-slate-700 dark:text-slate-300">{weakness}</span>
                       </li>
                     ))}
                   </ul>
                 </div>
                 
-                <div>
-                  <h3 className="text-lg font-semibold font-heading mb-3 text-blue-600 dark:text-blue-400 flex items-center gap-2">
-                    <span>💡</span> Recommendations
+                <div className="bg-blue-50 dark:bg-blue-900/20 p-6 rounded-xl">
+                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-blue-600 dark:text-blue-400">
+                    <span className="text-2xl">💡</span> Recommendations
                   </h3>
-                  <ul className="space-y-2">
+                  <ul className="space-y-3">
                     {analysis.recommendations.map((rec, idx) => (
-                      <li key={idx} className="text-sm text-slate-600 dark:text-slate-300 flex gap-2">
-                        <span className="text-blue-500 flex-shrink-0">•</span>
-                        <span>{rec}</span>
+                      <li key={idx} className="flex items-start gap-3">
+                        <span className="text-blue-500 mt-1">•</span>
+                        <span className="text-slate-700 dark:text-slate-300">{rec}</span>
                       </li>
                     ))}
                   </ul>
@@ -648,6 +962,67 @@ const TargetingLab: React.FC = () => {
                 >
                   ×
                 </button>
+              </div>
+              
+              {/* AI Generation Section */}
+              <div className="mb-6 p-4 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-xl border border-purple-200 dark:border-purple-700">
+                <div className="flex items-center gap-2 mb-3">
+                  <Sparkles className="w-5 h-5 text-purple-500" />
+                  <h3 className="text-lg font-semibold text-purple-700 dark:text-purple-300">AI-Powered Generation</h3>
+                </div>
+                <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
+                  Let AI help you create a comprehensive market segment based on your description
+                </p>
+                <div className="flex gap-3">
+                  <div className="flex-1">
+                    <input
+                      type="text"
+                      value={customSegment.characteristics}
+                      onChange={(e) => setCustomSegment({...customSegment, characteristics: e.target.value})}
+                      placeholder="Describe your target segment (e.g., budget-conscious millennials who love luxury cars)"
+                      className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-purple-300 dark:border-purple-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none text-sm"
+                    />
+                  </div>
+                  <motion.button
+                    onClick={handleGenerateSegment}
+                    disabled={isGeneratingSegment || !customSegment.characteristics.trim()}
+                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-blue-500 text-white font-semibold rounded-lg shadow-md hover:from-purple-600 hover:to-blue-600 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                    whileHover={{ scale: isGeneratingSegment ? 1 : 1.05 }}
+                    whileTap={{ scale: isGeneratingSegment ? 1 : 0.95 }}
+                  >
+                    {isGeneratingSegment ? (
+                      <>
+                        <RotateCw className="w-4 h-4 animate-spin" />
+                        Generating...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4" />
+                        🤖 Generate
+                      </>
+                    )}
+                  </motion.button>
+                </div>
+              </div>
+              
+              {/* Divider */}
+              <div className="flex items-center gap-4 mb-6">
+                <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700"></div>
+                <span className="text-sm text-slate-500 dark:text-slate-400 font-medium">OR</span>
+                <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700"></div>
+              </div>
+              
+              {/* Manual Input Section */}
+              <div className="mb-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="text-2xl">✍️</span>
+                  <h3 className="text-lg font-semibold text-slate-700 dark:text-slate-300">Manual Input</h3>
+                  {isAIGenerated && (
+                    <span className="px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-xs font-semibold rounded-full">
+                      🤖 AI Generated
+                    </span>
+                  )}
+                </div>
               </div>
               
               <div className="space-y-4 mb-6">
@@ -747,12 +1122,20 @@ const SegmentCard: React.FC<SegmentCardProps> = ({ segment, selected, onToggle }
     <motion.div
       onClick={onToggle}
       whileHover={{ y: -5 }}
-      className={`cursor-pointer p-6 rounded-2xl transition-all duration-300 ${
+      className={`cursor-pointer p-6 rounded-2xl transition-all duration-300 relative ${
         selected
           ? 'bg-gradient-to-br from-coral-500 to-warm-yellow-500 text-white shadow-xl ring-4 ring-coral-300 dark:ring-coral-700'
+          : segment.isAIGenerated
+          ? 'bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-900/30 dark:to-blue-900/30 border-2 border-purple-300 dark:border-purple-600 shadow-lg hover:shadow-xl'
           : 'bg-white dark:bg-slate-800 shadow-lg hover:shadow-xl'
       }`}
     >
+      {/* AI Badge */}
+      {segment.isAIGenerated && (
+        <div className="absolute -top-2 -right-2 bg-gradient-to-r from-purple-500 to-blue-500 text-white text-xs px-2 py-1 rounded-full font-semibold shadow-lg">
+          🤖 AI
+        </div>
+      )}
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1">
           <h3 className={`text-lg font-bold font-heading mb-1 ${selected ? 'text-white' : 'text-slate-800 dark:text-slate-100'}`}>

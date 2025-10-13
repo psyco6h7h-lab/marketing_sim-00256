@@ -98,6 +98,7 @@ interface CustomPersona {
   painPoints: string;
   goals: string;
   createdAt: number;
+  isAIGenerated?: boolean;
 }
 
 interface AppState {
@@ -147,8 +148,8 @@ interface AppState {
   addActivity: (activity: Omit<Activity, 'id' | 'timestamp'>) => void;
   
   // Notifications
-  pendingNotifications: Array<{ type: 'xp' | 'level' | 'achievement'; data: any }>;
-  addNotification: (notification: { type: 'xp' | 'level' | 'achievement'; data: any }) => void;
+  pendingNotifications: Array<{ type: 'error' | 'success'; data: any }>;
+  addNotification: (notification: { type: 'error' | 'success'; data: any }) => void;
   clearNotification: (index: number) => void;
   
   // Leaderboards
@@ -208,9 +209,6 @@ export const useAppStore = create<AppState>()(
         
         set({ totalXP: newTotalXP });
         
-        // Add XP notification
-        get().addNotification({ type: 'xp', data: { amount, source } });
-        
         // Check for level up
         if (newLevel > oldLevel) {
           get().addActivity({
@@ -218,14 +216,10 @@ export const useAppStore = create<AppState>()(
             title: `Reached Level ${newLevel}!`,
             xpEarned: 0,
           });
-          get().addNotification({ type: 'level', data: { level: newLevel } });
         }
         
-        // Check for new achievements
-        const newAchievements = get().checkAndUnlockAchievements();
-        newAchievements.forEach(achievement => {
-          get().addNotification({ type: 'achievement', data: achievement });
-        });
+        // Check for new achievements (but don't show notifications)
+        get().checkAndUnlockAchievements();
       },
       
       // Progress
