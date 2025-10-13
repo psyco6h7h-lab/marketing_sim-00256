@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { BarChart, BookOpen, FlaskConical, Gem, Target, Zap, Package, DollarSign, Megaphone, ChevronDown, X, Settings, LogOut } from './icons/Icons';
+import { BarChart, BookOpen, FlaskConical, Gem, Target, Zap, Package, DollarSign, Megaphone, ChevronDown, X } from './icons/Icons';
 
 interface NavItemProps {
   path: string;
@@ -150,20 +150,11 @@ const MobileSidebar: React.FC<MobileSidebarProps> = ({ isOpen, onClose }) => {
               ))}
             </nav>
 
-            {/* Footer */}
+            {/* Footer - Removed Settings to prevent crashes */}
             <div className="border-t border-slate-200 dark:border-slate-700 p-3">
-              <NavLink
-                to="/profile"
-                onClick={onClose}
-                className={({ isActive }) => 
-                  `flex items-center gap-3 px-3 py-3 rounded-lg text-slate-600 dark:text-slate-300 
-                   hover:bg-slate-100 dark:hover:bg-slate-700 transition-all duration-200 
-                   touch-manipulation ${isActive ? 'bg-coral-500 text-white dark:bg-coral-600' : ''}`
-                }
-              >
-                <Settings className="h-5 w-5 flex-shrink-0" />
-                <span className="font-medium">Settings</span>
-              </NavLink>
+              <div className="text-center text-xs text-slate-500 dark:text-slate-400">
+                Marketing Basics Simulator
+              </div>
             </div>
           </motion.aside>
         </>
