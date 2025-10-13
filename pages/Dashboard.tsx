@@ -81,26 +81,26 @@ const Dashboard: React.FC = () => {
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.2 }}
-                className="mb-8"
+                className="mb-6 sm:mb-8"
             >
                 <Link to="/sales-challenge">
-                    <div className="relative overflow-hidden bg-gradient-to-r from-red-500 via-orange-500 to-yellow-500 p-8 rounded-2xl shadow-2xl cursor-pointer hover:shadow-3xl transition-all group">
+                    <div className="relative overflow-hidden bg-gradient-to-r from-red-500 via-orange-500 to-yellow-500 p-4 sm:p-6 lg:p-8 rounded-xl sm:rounded-2xl shadow-2xl cursor-pointer hover:shadow-3xl transition-all group touch-manipulation">
                         <div className="absolute inset-0 bg-black/10 group-hover:bg-black/5 transition-all" />
-                        <div className="relative z-10 flex items-center justify-between">
+                        <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                             <div className="flex-1">
                                 <div className="flex items-center gap-2 mb-2">
-                                    <span className="px-3 py-1 bg-white/20 backdrop-blur-sm text-white text-xs font-bold rounded-full">
+                                    <span className="px-2 sm:px-3 py-1 bg-white/20 backdrop-blur-sm text-white text-xs font-bold rounded-full">
                                         NEW 🔥
                                     </span>
-                                    <span className="text-white/90 text-sm">Only 20% Win Rate!</span>
+                                    <span className="text-white/90 text-xs sm:text-sm">Only 20% Win Rate!</span>
                                 </div>
-                                <h2 className="text-3xl font-bold text-white mb-2">AI Sales Challenge</h2>
-                                <p className="text-white/90 text-lg mb-1">Face a brutal AI buyer. Sell ANYTHING you want.</p>
-                                <p className="text-white/80 text-sm">Practice your real products • Get instant feedback</p>
+                                <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-2">AI Sales Challenge</h2>
+                                <p className="text-white/90 text-sm sm:text-base lg:text-lg mb-1">Face a brutal AI buyer. Sell ANYTHING you want.</p>
+                                <p className="text-white/80 text-xs sm:text-sm">Practice your real products • Get instant feedback</p>
                             </div>
-                            <div className="flex-shrink-0 ml-8 text-white">
-                                <div className="text-7xl mb-2 group-hover:scale-110 transition-transform">⚡</div>
-                                <p className="text-center text-sm font-semibold bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full">
+                            <div className="flex-shrink-0 self-center sm:self-auto">
+                                <div className="text-4xl sm:text-6xl lg:text-7xl mb-2 group-hover:scale-110 transition-transform">⚡</div>
+                                <p className="text-center text-xs sm:text-sm font-semibold bg-white/20 backdrop-blur-sm px-3 sm:px-4 py-2 rounded-full">
                                     Try Now →
                                 </p>
                             </div>
@@ -110,42 +110,43 @@ const Dashboard: React.FC = () => {
             </motion.div>
             
             
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
                 <motion.div 
-                    className="lg:col-span-1 space-y-6"
+                    className="lg:col-span-1 space-y-4 sm:space-y-6"
                     variants={itemVariants}
                     initial="hidden"
                     animate="visible"
                 >
                     {/* Overall Progress */}
-                    <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg flex flex-col items-center justify-center">
-                        <h2 className="text-xl font-semibold font-heading mb-4">Overall Progress</h2>
-                        <ProgressRing progress={totalProgress} size={150} strokeWidth={12} />
-                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-4">
+                    <div className="bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-xl sm:rounded-2xl shadow-lg flex flex-col items-center justify-center">
+                        <h2 className="text-lg sm:text-xl font-semibold font-heading mb-3 sm:mb-4">Overall Progress</h2>
+                        <ProgressRing progress={totalProgress} size={120} strokeWidth={10} className="sm:hidden" />
+                        <ProgressRing progress={totalProgress} size={150} strokeWidth={12} className="hidden sm:block" />
+                        <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-3 sm:mt-4 text-center">
                             {completedModules} of {modules.length} modules completed
                         </p>
                     </div>
                 </motion.div>
                 
                 <motion.div
-                    className="lg:col-span-2 space-y-6"
+                    className="lg:col-span-2 space-y-4 sm:space-y-6"
                     variants={itemVariants}
                     initial="hidden"
                     animate="visible"
                 >
                     {/* Recommended Module */}
                     {recommendedModule && (
-                        <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg">
-                            <h2 className="text-xl font-semibold font-heading mb-4">Recommended For You</h2>
+                        <div className="bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-xl sm:rounded-2xl shadow-lg">
+                            <h2 className="text-lg sm:text-xl font-semibold font-heading mb-3 sm:mb-4">Recommended For You</h2>
                             <Link to={recommendedModule.path}>
-                                <div className="flex items-center p-4 bg-gradient-to-r from-coral-100 to-warm-yellow-100 dark:from-coral-900/50 dark:to-warm-yellow-900/50 rounded-lg hover:shadow-lg transition-shadow cursor-pointer">
-                                    <recommendedModule.icon className="w-12 h-12 text-coral-600 dark:text-coral-400" />
-                                    <div className="ml-4 flex-1">
-                                        <h3 className="font-semibold text-lg">{recommendedModule.title}</h3>
-                                        <p className="text-sm text-slate-600 dark:text-slate-300">{recommendedModule.description}</p>
+                                <div className="flex items-center p-3 sm:p-4 bg-gradient-to-r from-coral-100 to-warm-yellow-100 dark:from-coral-900/50 dark:to-warm-yellow-900/50 rounded-lg hover:shadow-lg transition-shadow cursor-pointer touch-manipulation">
+                                    <recommendedModule.icon className="w-8 h-8 sm:w-12 sm:h-12 text-coral-600 dark:text-coral-400 flex-shrink-0" />
+                                    <div className="ml-3 sm:ml-4 flex-1 min-w-0">
+                                        <h3 className="font-semibold text-sm sm:text-lg truncate">{recommendedModule.title}</h3>
+                                        <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 line-clamp-2">{recommendedModule.description}</p>
                                     </div>
-                                    <div className="text-right">
-                                        <p className="text-2xl font-bold text-coral-500">{userProgress[recommendedModuleId] || 0}%</p>
+                                    <div className="text-right flex-shrink-0">
+                                        <p className="text-lg sm:text-2xl font-bold text-coral-500">{userProgress[recommendedModuleId] || 0}%</p>
                                     </div>
                                 </div>
                             </Link>
@@ -153,22 +154,22 @@ const Dashboard: React.FC = () => {
                     )}
                     
                     {/* Recent Activity */}
-                    <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg">
-                        <h2 className="text-xl font-semibold font-heading mb-4">Recent Activity</h2>
+                    <div className="bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-xl sm:rounded-2xl shadow-lg">
+                        <h2 className="text-lg sm:text-xl font-semibold font-heading mb-3 sm:mb-4">Recent Activity</h2>
                         {activities.length === 0 ? (
                             <p className="text-center text-slate-500 dark:text-slate-400 py-8">
                                 No activity yet. Start learning to see your progress here!
                             </p>
                         ) : (
-                            <div className="space-y-3 max-h-80 overflow-y-auto">
+                            <div className="space-y-2 sm:space-y-3 max-h-60 sm:max-h-80 overflow-y-auto">
                                 {activities.slice(0, 10).map((activity) => (
                                     <motion.div
                                         key={activity.id}
                                         initial={{ opacity: 0, x: -20 }}
                                         animate={{ opacity: 1, x: 0 }}
-                                        className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-900 rounded-lg"
+                                        className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-slate-50 dark:bg-slate-900 rounded-lg touch-manipulation"
                                     >
-                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-lg flex-shrink-0 ${
+                                        <div className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-sm sm:text-lg flex-shrink-0 ${
                                             activity.type === 'lab_complete' ? 'bg-coral-100 dark:bg-coral-900/30' :
                                             activity.type === 'quiz_complete' ? 'bg-blue-100 dark:bg-blue-900/30' :
                                             activity.type === 'level_up' ? 'bg-yellow-100 dark:bg-yellow-900/30' :
@@ -180,7 +181,7 @@ const Dashboard: React.FC = () => {
                                             {activity.type === 'achievement' && '🏆'}
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <p className="font-semibold text-sm text-slate-800 dark:text-slate-100 truncate">
+                                            <p className="font-semibold text-xs sm:text-sm text-slate-800 dark:text-slate-100 truncate">
                                                 {activity.title}
                                             </p>
                                             <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -196,13 +197,13 @@ const Dashboard: React.FC = () => {
             </div>
 
             <motion.div
-                className="mt-8"
+                className="mt-6 sm:mt-8"
                 variants={containerVariants}
                 initial="hidden"
                 animate="visible"
             >
-                <h2 className="text-2xl font-bold font-heading mb-4">Your Modules</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+                <h2 className="text-xl sm:text-2xl font-bold font-heading mb-3 sm:mb-4">Your Modules</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
                     {modules.map((module) => (
                         <motion.div key={module.path} variants={itemVariants}>
                             <ModuleCard {...module} progress={userProgress?.[module.path.substring(1)] || 0} />
@@ -225,18 +226,19 @@ interface ModuleCardProps {
 const ModuleCard: React.FC<ModuleCardProps> = ({ title, description, path, icon: Icon, progress }) => (
     <Link to={path} className="block group">
         <motion.div 
-            className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg h-full flex flex-col transition-all duration-300 hover:shadow-2xl hover:-translate-y-2"
-            whileHover={{ scale: 1.05 }}
+            className="bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-xl sm:rounded-2xl shadow-lg h-full flex flex-col transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 sm:hover:-translate-y-2 touch-manipulation"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
         >
             <div className="flex-grow">
-                <Icon className="w-10 h-10 text-coral-500 mb-4" />
-                <h3 className="text-lg font-bold font-heading">{title}</h3>
-                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{description}</p>
+                <Icon className="w-8 h-8 sm:w-10 sm:h-10 text-coral-500 mb-3 sm:mb-4" />
+                <h3 className="text-base sm:text-lg font-bold font-heading line-clamp-2">{title}</h3>
+                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1 line-clamp-2">{description}</p>
             </div>
-            <div className="mt-4">
-                <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
+            <div className="mt-3 sm:mt-4">
+                <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-1.5 sm:h-2">
                     <motion.div 
-                        className="bg-coral-500 h-2 rounded-full"
+                        className="bg-coral-500 h-1.5 sm:h-2 rounded-full"
                         initial={{ width: 0 }}
                         animate={{ width: `${progress}%` }}
                         transition={{ duration: 1 }}
