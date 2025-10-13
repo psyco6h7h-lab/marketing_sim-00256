@@ -128,11 +128,8 @@ const PricingLab: React.FC = () => {
       return;
     }
 
-    // Make all fields optional - provide feedback even with partial data
-    if (!selectedStrategy) {
-      setError('Please select a pricing strategy to get AI feedback');
-      return;
-    }
+    // Allow feedback even with no data - AI will suggest what to fill
+    // No validation required - user can click anytime
     
     setIsLoading(true);
     setError(null);

@@ -219,11 +219,8 @@ const PromotionLab: React.FC = () => {
       return;
     }
 
-    // Make fields optional - provide feedback even with partial data
-    if (calculateTotalBudget() === 0) {
-      setError('Please allocate some budget to get AI feedback');
-      return;
-    }
+    // Allow feedback even with no data - AI will suggest what to fill
+    // No validation required - user can click anytime
     
     setIsLoading(true);
     setError(null);

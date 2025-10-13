@@ -135,11 +135,8 @@ const PositioningStudio: React.FC = () => {
       return;
     }
 
-    // Make all fields optional - provide feedback even with partial data
-    if (!positioning.targetAudience && !positioning.benefit && !positioning.differentiator) {
-      setError('Please fill in at least some positioning information to get AI feedback');
-      return;
-    }
+    // Allow feedback even with no data - AI will suggest what to fill
+    // No validation required - user can click anytime
     
     setIsLoading(true);
     setError(null);
