@@ -14,8 +14,7 @@
   # Node version
   NODE_VERSION = "18"
 
-# Disable secrets scanning completely (environment variables are properly configured in Netlify dashboard)
-SECRETS_SCAN_ENABLED = false
+# Environment variables are properly configured in Netlify dashboard
 
 # Redirect rules for SPA routing
 [[redirects]]
