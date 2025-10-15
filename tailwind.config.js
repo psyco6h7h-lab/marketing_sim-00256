@@ -1,0 +1,60 @@
+/** @type {import('tailwindcss').Config} */
+export default {
+  content: [
+    "./index.html",
+    "./src/**/*.{js,ts,jsx,tsx}",
+    "./pages/**/*.{js,ts,jsx,tsx}",
+    "./components/**/*.{js,ts,jsx,tsx}",
+  ],
+  darkMode: 'class',
+  theme: {
+    extend: {
+      colors: {
+        'deep-blue': {
+          '50': '#f0f8ff',
+          '100': '#e0f0fe',
+          '200': '#c4e5fd',
+          '300': '#9ed8fc',
+          '400': '#72c5fa',
+          '500': '#4fabf7',
+          '600': '#338ef3',
+          '700': '#247be9',
+          '800': '#1f68c5',
+          '900': '#1e559f',
+          '950': '#173662',
+        },
+        'coral': {
+          '50': '#fff5f2',
+          '100': '#ffe9e2',
+          '200': '#ffd2c5',
+          '300': '#ffb6a1',
+          '400': '#ff8f72',
+          '500': '#ff6d4d',
+          '600': '#f9512c',
+          '700': '#dd3a1c',
+          '800': '#b42f1a',
+          '900': '#932a1b',
+          '950': '#50110a',
+        },
+        'warm-yellow': {
+          '50': '#fefce8',
+          '100': '#fef9c3',
+          '200': '#fef08a',
+          '300': '#fde047',
+          '400': '#facc15',
+          '500': '#eab308',
+          '600': '#ca8a04',
+          '700': '#a16207',
+          '800': '#854d0e',
+          '900': '#713f12',
+          '950': '#422006',
+        },
+      },
+      fontFamily: {
+        sans: ['Roboto', 'sans-serif'],
+        heading: ['Poppins', 'sans-serif'],
+      },
+    },
+  },
+  plugins: [],
+}
