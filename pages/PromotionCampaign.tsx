@@ -12,7 +12,6 @@ const groq = new Groq({
 type CampaignMode = 'basic' | 'boss';
 type CustomerPersonality = 'skeptic' | 'researcher' | 'budget' | 'quality' | 'impulsive' | 'technical' | 'silent' | 'early-adopter' | 'practical' | 'trend-follower';
 type ProductMode = 'random' | 'custom';
-type TimeOption = '5' | '10';
 
 interface Customer {
   id: string;
@@ -35,6 +34,8 @@ interface Message {
   sender: 'user' | 'ai';
   text: string;
   timestamp: number;
+  customerId?: string;  // For Boss Mode multi-customer tracking
+  customerName?: string; // NEW: Display name for WhatsApp-style bubbles
 }
 
 interface CampaignResult {
@@ -43,7 +44,6 @@ interface CampaignResult {
   strengths: string[];
   improvements: string[];
   score: number;
-  xpEarned: number;
   customerResults?: CustomerResult[];
   customersConvinced?: number;
   totalCustomers?: number;
@@ -96,7 +96,6 @@ const customerNames = [
 const PromotionCampaign: React.FC = () => {
   const [stage, setStage] = useState<'setup' | 'campaign' | 'result'>('setup');
   const [mode, setMode] = useState<CampaignMode>('basic');
-  const [timeOption, setTimeOption] = useState<TimeOption>('5');
   const [productMode, setProductMode] = useState<ProductMode>('random');
   const [customProduct, setCustomProduct] = useState('');
   const [customDescription, setCustomDescription] = useState('');
@@ -109,11 +108,10 @@ const PromotionCampaign: React.FC = () => {
   const [conversationStarted, setConversationStarted] = useState(false);
   const [timer, setTimer] = useState(300); // 5 minutes default
   const [result, setResult] = useState<CampaignResult | null>(null);
-  const [campaignAttempts, setCampaignAttempts] = useState(0);
+  const [duration, setDuration] = useState<number>(5); // minutes
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const incrementAI = useAppStore((state) => state.incrementAIInteractions);
-  const earnXP = useAppStore((state) => state.earnXP);
   
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -189,11 +187,10 @@ const PromotionCampaign: React.FC = () => {
     }
     
     setStage('campaign');
-    setCampaignAttempts(prev => prev + 1);
     
-    // Set timer based on mode and time option
+    // Set timer based on mode and duration
     if (mode === 'basic') {
-      setTimer(timeOption === '5' ? 300 : 600); // 5 or 10 minutes
+      setTimer(duration * 60); // Convert minutes to seconds
     } else {
       setTimer(1200); // 20 minutes for boss mode
     }
@@ -206,12 +203,12 @@ const PromotionCampaign: React.FC = () => {
         const openings: Record<CustomerPersonality, string> = {
           skeptic: "Why should I care about this product? I've seen similar things before. 🤨",
           researcher: "I've researched similar products. What makes this different? 📊",
-          budget: "What's the value here? I need to know if it's worth my time. 💰",
+          budget: "What is the value here? I need to know if it is worth my time. 💰",
           quality: "Is this actually better than what I have now? I only want the best. ⭐",
           impulsive: "Ooh, tell me about this! What makes it special? 🤩",
           technical: "I need to understand how this works and what the benefits are. 🔧",
-          silent: "I'm listening... 👀",
-          'early-adopter': "What's new and innovative about this? I love trying new things! 🚀",
+          silent: "....... 👀",
+          'early-adopter': "What is new and innovative about this? I love trying new things! 🚀",
           practical: "How exactly will this help me in my daily life? 🔧",
           'trend-follower': "Is this popular? What do other people think about it? 📈",
         };
@@ -225,32 +222,35 @@ const PromotionCampaign: React.FC = () => {
         const openings: Record<CustomerPersonality, string> = {
           skeptic: "Why should I care about this product?",
           researcher: "What makes this different from competitors?",
-          budget: "What's the value proposition here?",
+          budget: "What is the value proposition here?",
           quality: "Is this actually better than what I have now?",
           impulsive: "Tell me about this! What makes it special?",
           technical: "How does this work and what are the benefits?",
-          silent: "I'm listening...",
-          'early-adopter': "What's new and innovative about this?",
+          silent: ".......",
+          'early-adopter': "What is new and innovative about this?",
           practical: "How will this help me in my daily life?",
           'trend-follower': "Is this popular? What do others think?",
         };
         
-        const openingMessages = respondingCustomers.map(customer => 
-          `${customer.name}: ${openings[customer.personality]}`
-        ).join('\n\n');
-        
-        sendAIMessage(openingMessages);
+        // Send opening messages from each customer individually
+        respondingCustomers.forEach((customer, index) => {
+          setTimeout(() => {
+            sendAIMessage(openings[customer.personality], customer.id, customer.name);
+          }, index * 500); // Stagger messages by 500ms
+        });
       }
       setConversationStarted(true);
     }, 1000);
   };
   
-  const sendAIMessage = (text: string) => {
+  const sendAIMessage = (text: string, customerId?: string, customerName?: string) => {
     const newMessage: Message = {
       id: `${Date.now()}-${Math.random()}`,
       sender: 'ai',
       text,
       timestamp: Date.now(),
+      customerId, // Store which customer sent this
+      customerName, // Store customer name for display
     };
     setMessages((prev) => [...prev, newMessage]);
   };
@@ -307,22 +307,22 @@ HOW TO ACT LIKE A REAL CUSTOMER WITH EMOJIS:
    - Excited: "Wow! 🤩", "That's exactly what I need! 🎯", "Amazing! ✨"
 
 2. ACT ACCORDING TO YOUR PERSONALITY:
-   ${personality === 'skeptic' ? '- Question value: "Why should I care? 🤨", "What's the point? 🤔", "I doubt that 🙄", "Show me the benefit 📊"' : ''}
+   ${personality === 'skeptic' ? '- Question value: "Why should I care? 🤨", "What is the point? 🤔", "I doubt that 🙄", "Show me the benefit 📊"' : ''}
    ${personality === 'researcher' ? '- Compare: "What about [competitor]? 🔍", "I read that... 📚", "The reviews say... ⭐", "Let me check... 🔎"' : ''}
-   ${personality === 'budget' ? '- Focus on value: "What's the ROI? 💰", "Is it worth it? 💸", "What's the benefit? 🏷️", "Show me the value 🎫"' : ''}
+   ${personality === 'budget' ? '- Focus on value: "What is the ROI? 💰", "Is it worth it? 💸", "What is the benefit? 🏷️", "Show me the value 🎫"' : ''}
    ${personality === 'quality' ? '- Demand premium: "Is this the best? ⭐", "What makes it special? 💎", "I want top quality 👑", "Show me the quality 🔨"' : ''}
    ${personality === 'impulsive' ? '- Get excited: "Ooh! 🤩", "I want it! 😍", "Tell me more! 🚀", "This sounds great! 🔥"' : ''}
-   ${personality === 'technical' ? '- Ask details: "How does it work? 🔧", "What are the features? ⚙️", "Technical details? 📋", "What's the process? 📊"' : ''}
+   ${personality === 'technical' ? '- Ask details: "How does it work? 🔧", "What are the features? ⚙️", "Technical details? 📋", "What is the process? 📊"' : ''}
    ${personality === 'silent' ? '- Be brief: "Okay 👍", "Hmm 🤔", "And? 👀", "Go on... ➡️", "I see 👁️"' : ''}
-   ${personality === 'early-adopter' ? '- Seek innovation: "What's new? 🚀", "How is this different? 💡", "What's unique? ✨", "I love new things! 🔥"' : ''}
-   ${personality === 'practical' ? '- Focus on benefits: "How will this help me? 🔧", "What's the practical use? 💪", "Real benefits? 📈", "Daily impact? ⚡"' : ''}
+   ${personality === 'early-adopter' ? '- Seek innovation: "What is new? 🚀", "How is this different? 💡", "What is unique? ✨", "I love new things! 🔥"' : ''}
+   ${personality === 'practical' ? '- Focus on benefits: "How will this help me? 🔧", "What is the practical use? 💪", "Real benefits? 📈", "Daily impact? ⚡"' : ''}
    ${personality === 'trend-follower' ? '- Want social proof: "Is this popular? 📈", "What do others say? 👥", "Any testimonials? ⭐", "Social proof? 🏆"' : ''}
 
 3. ASK MARKETING-FOCUSED QUESTIONS:
    - "Why should I care about this?"
    - "What problem does this solve?"
    - "How is this different from alternatives?"
-   - "What's the benefit to me?"
+   - "What is the benefit to me?"
    - "Who else uses this?"
 
 4. SHOW INTEREST SIGNALS IF CONVINCED:
@@ -357,20 +357,21 @@ HOW TO ACT LIKE REAL CUSTOMERS:
 
 1. NOT ALL CUSTOMERS RESPOND EVERY TIME (randomize 1-3 customers)
 2. EACH CUSTOMER HAS DIFFERENT CONCERNS:
-   - Skeptic: "Why should I care?", "What's the point?"
+   - Skeptic: "Why should I care?", "What is the point?"
    - Researcher: "How is this different?", "What about competitors?"
-   - Budget: "What's the value?", "Is it worth it?"
+   - Budget: "What is the value?", "Is it worth it?"
    - Quality: "Is this the best?", "What makes it special?"
    - Impulsive: "Tell me more!", "This sounds great!"
    - Technical: "How does it work?", "What are the features?"
-   - Silent: "Hmm...", "I see..."
-   - Early Adopter: "What's new?", "How is this innovative?"
-   - Practical: "How will this help me?", "What's the benefit?"
+   - Silent: "Hmm...", "I see...", ".......", "🤔"
+   - Early Adopter: "What is new?", "How is this innovative?"
+   - Practical: "How will this help me?", "What is the benefit?"
    - Trend Follower: "Is this popular?", "What do others think?"
 
 3. FORMAT: "Customer Name: message\n\nCustomer Name: message"
 4. BE BRIEF: Max 1-2 sentences per customer
 5. SHOW INTEREST IF CONVINCED: "I'm interested!", "Tell me more!", "This sounds good!"
+6. SILENT CUSTOMERS: If a customer is quiet/thinking, respond with natural silence like ".......", "hmm...", "🤔", "I'm thinking...", "Let me process this..."
 
 RESPOND NOW as 1-3 random customers (format: "Name: message"):`;
       
@@ -405,7 +406,32 @@ RESPOND NOW as 1-3 random customers (format: "Name: message"):`;
       }
       
       setIsAITyping(false);
-      sendAIMessage(aiResponse);
+      
+      // Handle Boss Mode multi-customer responses
+      if (mode === 'boss' && aiResponse.includes(':')) {
+        // Split multi-customer response and send each message individually
+        const customerMessages = aiResponse.split('\n\n').filter(msg => msg.trim());
+        customerMessages.forEach((msg, index) => {
+          setTimeout(() => {
+            // Parse: "Alex: Message content here"
+            const nameMatch = msg.match(/^([^:]+):\s*(.+)$/s);
+            
+            if (nameMatch) {
+              const customerName = nameMatch[1].trim();
+              const messageContent = nameMatch[2].trim();
+              const customer = customers.find(c => c.name === customerName);
+              
+              // Send with clean content and metadata
+              sendAIMessage(messageContent, customer?.id, customerName);
+            } else {
+              sendAIMessage(msg);
+            }
+          }, index * 500); // Stagger messages by 500ms
+        });
+      } else {
+        // Basic mode or single response
+        sendAIMessage(aiResponse);
+      }
       
       // Check if conversation should end (if AI mentions interest or refusing strongly)
       const lowerResponse = aiResponse.toLowerCase();
@@ -542,13 +568,8 @@ IMPORTANT: Return ONLY a valid JSON object with this exact structure (no markdow
         throw new Error('Invalid evaluation format');
       }
       
-      const xpEarned = evaluation.won 
-        ? (mode === 'boss' ? 300 : 100)
-        : 10;
-      
       const finalResult: CampaignResult = {
         ...evaluation,
-        xpEarned,
         customerResults: evaluation.customerResults,
         customersConvinced: evaluation.customerResults?.filter(r => r.convinced).length || 0,
         totalCustomers: customers.length,
@@ -558,8 +579,7 @@ IMPORTANT: Return ONLY a valid JSON object with this exact structure (no markdow
       setStage('result');
       setIsAITyping(false);
       
-      // Award XP
-      earnXP(xpEarned, evaluation.won ? `Successful Campaign: ${selectedProduct}` : 'Campaign Attempt');
+      // Campaign completed
       incrementAI();
       
     } catch (error) {
@@ -567,11 +587,10 @@ IMPORTANT: Return ONLY a valid JSON object with this exact structure (no markdow
       setIsAITyping(false);
       setResult({
         won: false,
-        feedback: "The buyer walked away. Keep practicing!",
+        feedback: "The audience wasn't convinced. Keep practicing!",
         strengths: ["You showed up and tried"],
-        improvements: ["Study more marketing concepts", "Practice objection handling"],
+        improvements: ["Study more marketing concepts", "Practice value proposition"],
         score: 50,
-        xpEarned: 10,
       });
       setStage('result');
     }
@@ -615,94 +634,80 @@ IMPORTANT: Return ONLY a valid JSON object with this exact structure (no markdow
               <h2 className="text-xl font-bold font-heading mb-4">Select Campaign Mode</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                  {[
-                   { id: 'basic', name: 'Basic Campaign', time: '5-10 min', difficulty: '30%', emoji: '⚡', xp: '100-200 XP' },
-                   { id: 'boss', name: 'Boss Mode', time: '20 min', difficulty: '50%', emoji: '🔥', xp: '300 XP', locked: campaignAttempts < 10 },
+                   { id: 'basic', name: 'Basic Campaign', description: 'Single Customer', difficulty: '30% success rate', emoji: '⚡' },
+                   { id: 'boss', name: 'Boss Mode', description: 'Multi-Customer Panel', difficulty: '50% success rate', emoji: '🔥' },
                  ].map((m) => (
                   <button
                     key={m.id}
-                    onClick={() => !m.locked && setMode(m.id as CampaignMode)}
-                    disabled={m.locked}
+                    onClick={() => setMode(m.id as CampaignMode)}
                     className={`p-6 rounded-xl transition-all ${
                       mode === m.id
                         ? 'bg-gradient-to-br from-coral-500 to-warm-yellow-500 text-white shadow-xl'
-                        : m.locked
-                        ? 'bg-slate-200 dark:bg-slate-700 text-slate-400 cursor-not-allowed'
                         : 'bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600'
                     }`}
                   >
                     <div className="text-4xl mb-3">{m.emoji}</div>
                     <h3 className="font-bold text-lg mb-2">{m.name}</h3>
-                    <p className="text-sm opacity-90 mb-1">{m.time} • {m.difficulty} success rate</p>
-                    <p className="text-xs opacity-75">{m.xp}</p>
-                    {m.locked && <p className="text-xs mt-2">🔒 Complete 10 campaigns</p>}
+                    <p className="text-sm opacity-90 mb-1">{m.description}</p>
+                    <p className="text-xs opacity-75">{m.difficulty}</p>
                   </button>
                 ))}
               </div>
             </div>
             
-            {/* Time Selection for Basic Mode */}
-            {mode === 'basic' && (
-              <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg">
-                <h2 className="text-xl font-bold font-heading mb-4">Choose Campaign Duration</h2>
-                <div className="grid grid-cols-2 gap-4">
-                  {[
-                    { id: '5', name: 'Quick Campaign', time: '5 min', xp: '100 XP', emoji: '⚡' },
-                    { id: '10', name: 'Extended Campaign', time: '10 min', xp: '200 XP', emoji: '🎯' },
-                  ].map((t) => (
-                    <button
-                      key={t.id}
-                      onClick={() => setTimeOption(t.id as TimeOption)}
-                      className={`p-4 rounded-xl transition-all ${
-                        timeOption === t.id
-                          ? 'bg-gradient-to-br from-deep-blue-500 to-deep-blue-600 text-white shadow-xl'
-                          : 'bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600'
-                      }`}
-                    >
-                      <div className="text-2xl mb-2">{t.emoji}</div>
-                      <h3 className="font-bold">{t.name}</h3>
-                      <p className="text-sm opacity-90">{t.time} • {t.xp}</p>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-            
-            {/* Product Selection */}
+            {/* Campaign Settings */}
             <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg">
-              <h2 className="text-xl font-bold font-heading mb-4">Choose Your Product</h2>
+              <h2 className="text-xl font-bold font-heading mb-4">Campaign Settings</h2>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                <button
-                  onClick={() => setProductMode('random')}
-                  className={`p-6 rounded-xl transition-all text-left ${
-                    productMode === 'random'
-                      ? 'bg-gradient-to-br from-deep-blue-500 to-deep-blue-600 text-white shadow-xl'
-                      : 'bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600'
-                  }`}
+              {/* Duration Selection */}
+              <div className="mb-6">
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                  ⏱️ Campaign Duration
+                </label>
+                <select
+                  value={duration}
+                  onChange={(e) => setDuration(Number(e.target.value))}
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border-2 border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-coral-500 outline-none text-base appearance-none cursor-pointer hover:border-coral-400 transition-colors"
                 >
-                  <div className="text-3xl mb-2">🎲</div>
-                  <h3 className="font-bold text-lg mb-1">Surprise Me!</h3>
-                  <p className="text-sm opacity-90">Get a random product to promote (20 products)</p>
-                </button>
-                
-                <button
-                  onClick={() => setProductMode('custom')}
-                  className={`p-6 rounded-xl transition-all text-left ${
-                    productMode === 'custom'
-                      ? 'bg-gradient-to-br from-coral-500 to-warm-yellow-500 text-white shadow-xl'
-                      : 'bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600'
-                  }`}
-                >
-                  <div className="text-3xl mb-2">✏️</div>
-                  <h3 className="font-bold text-lg mb-1">My Product</h3>
-                  <p className="text-sm opacity-90">Promote YOUR own product/service</p>
-                </button>
+                  {mode === 'basic' ? (
+                    <>
+                      <option value={5}>⚡ 5 minutes</option>
+                      <option value={10}>🎯 10 minutes</option>
+                      <option value={15}>🔥 15 minutes</option>
+                    </>
+                  ) : (
+                    <option value={20}>🔥 20 minutes</option>
+                  )}
+                </select>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  {mode === 'basic' ? 'Choose your campaign duration' : 'Boss Mode is fixed at 20 minutes'}
+                </p>
               </div>
               
+              {/* Product Selection */}
+              <div className="mb-6">
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                  🎯 Product Selection
+                </label>
+                <select
+                  value={productMode}
+                  onChange={(e) => setProductMode(e.target.value as 'random' | 'custom')}
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border-2 border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-coral-500 outline-none text-base appearance-none cursor-pointer hover:border-coral-400 transition-colors"
+                >
+                  <option value="random">🎲 Surprise Me - Random from 20 products</option>
+                  <option value="custom">✏️ My Product - Promote your own</option>
+                </select>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  Choose how to select your product
+                </p>
+              </div>
+              
+              {/* Custom Product Inputs */}
               {productMode === 'custom' && (
                 <motion.div
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
                   className="space-y-4"
                 >
                   <div>
@@ -713,7 +718,7 @@ IMPORTANT: Return ONLY a valid JSON object with this exact structure (no markdow
                       type="text"
                       value={customProduct}
                       onChange={(e) => setCustomProduct(e.target.value)}
-                      placeholder="e.g., My SaaS App, Freelance Design Services, Handmade Jewelry"
+                      placeholder="e.g., My SaaS App, Freelance Design Services"
                       className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-coral-500 outline-none"
                     />
                   </div>
@@ -733,6 +738,7 @@ IMPORTANT: Return ONLY a valid JSON object with this exact structure (no markdow
               )}
             </div>
             
+            
             {/* Start Button */}
             <div className="flex justify-center">
               <motion.button
@@ -740,7 +746,7 @@ IMPORTANT: Return ONLY a valid JSON object with this exact structure (no markdow
                 disabled={productMode === 'custom' && !customProduct.trim()}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className="px-12 py-4 bg-gradient-to-r from-coral-500 to-warm-yellow-500 text-white text-xl font-bold rounded-xl shadow-xl hover:shadow-2xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full md:w-auto md:px-12 py-4 bg-gradient-to-r from-coral-500 to-warm-yellow-500 text-white text-xl font-bold rounded-xl shadow-xl hover:shadow-2xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 🚀 Start Campaign
               </motion.button>
@@ -812,7 +818,28 @@ IMPORTANT: Return ONLY a valid JSON object with this exact structure (no markdow
                     <div className="flex items-end gap-2 max-w-[75%]">
                       {message.sender === 'ai' && (
                         <div className="w-8 h-8 rounded-full bg-gradient-to-br from-deep-blue-400 to-deep-blue-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-                          {mode === 'basic' ? personalities[personality].emoji : '👥'}
+                          {mode === 'basic' ? (
+                            // Basic mode: show single customer emoji
+                            personalities[personality].emoji
+                          ) : (
+                            // Boss mode: find customer by ID or parse from message
+                            (() => {
+                              if (message.customerId) {
+                                // Use stored customer ID
+                                const customer = customers.find(c => c.id === message.customerId);
+                                return customer ? customer.emoji : '👥';
+                              } else {
+                                // Fallback: parse customer name from message text
+                                const nameMatch = message.text.match(/^([^:]+):/);
+                                if (nameMatch) {
+                                  const customerName = nameMatch[1].trim();
+                                  const customer = customers.find(c => c.name === customerName);
+                                  return customer ? customer.emoji : '👥';
+                                }
+                                return '👥';
+                              }
+                            })()
+                          )}
                         </div>
                       )}
                       <div
@@ -822,7 +849,20 @@ IMPORTANT: Return ONLY a valid JSON object with this exact structure (no markdow
                             : 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 rounded-bl-sm border border-slate-200 dark:border-slate-600'
                         }`}
                       >
+                        {/* Boss Mode: Customer Name Header */}
+                        {message.sender === 'ai' && mode === 'boss' && message.customerName && (
+                          <>
+                            <p className="font-bold text-sm text-deep-blue-600 dark:text-deep-blue-400 mb-2">
+                              {message.customerName}
+                            </p>
+                            <div className="border-t border-slate-300 dark:border-slate-600 mb-2"></div>
+                          </>
+                        )}
+                        
+                        {/* Message Content */}
                         <p className="text-[15px] leading-relaxed">{message.text}</p>
+                        
+                        {/* Timestamp */}
                         <p className={`text-xs mt-1 ${
                           message.sender === 'user' ? 'text-white/70' : 'text-slate-400'
                         }`}>
@@ -868,7 +908,14 @@ IMPORTANT: Return ONLY a valid JSON object with this exact structure (no markdow
               
               {/* Input Area */}
               <div className="border-t-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4">
-                {mode === 'basic' && timeOption === '10' && messages.length === 1 && (
+                
+                {/* Product Name Banner */}
+                <div className="mb-3 px-4 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg border-l-4 border-blue-500">
+                  <p className="text-sm font-semibold text-blue-800 dark:text-blue-300">
+                    📦 Promoting: <span className="font-bold">{selectedProduct}</span>
+                  </p>
+                </div>
+                {mode === 'basic' && duration >= 10 && messages.length === 1 && (
                   <div className="mb-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border-l-4 border-blue-500">
                     <p className="text-sm text-blue-800 dark:text-blue-300 font-semibold">
                       💡 Extended Campaign Tip: Follow the AIDA model:
@@ -944,7 +991,6 @@ IMPORTANT: Return ONLY a valid JSON object with this exact structure (no markdow
               <h2 className="text-3xl font-bold mb-2">
                 {result.won ? 'SUCCESSFUL CAMPAIGN!' : 'Campaign Needs Work'}
               </h2>
-              <p className="text-xl opacity-90">+{result.xpEarned} XP</p>
               <div className="mt-4">
                 <p className="text-sm opacity-90">Performance Score</p>
                 <p className="text-5xl font-bold">{result.score}/100</p>
