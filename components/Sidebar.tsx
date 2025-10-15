@@ -43,7 +43,7 @@ const navSections: NavSection[] = [
   {
     type: 'single',
     items: [
-      { path: '/sales-challenge', icon: Zap, label: 'Sales Challenge' }
+      { path: '/promotion-campaign', icon: Zap, label: 'Promotion Campaign' }
     ]
   }
 ];

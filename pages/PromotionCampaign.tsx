@@ -9,9 +9,26 @@ const groq = new Groq({
   dangerouslyAllowBrowser: true 
 });
 
-type ChallengeMode = 'quick' | 'full' | 'boss';
-type BuyerPersonality = 'skeptic' | 'researcher' | 'budget' | 'quality' | 'impulsive' | 'technical' | 'silent';
+type CampaignMode = 'basic' | 'boss';
+type CustomerPersonality = 'skeptic' | 'researcher' | 'budget' | 'quality' | 'impulsive' | 'technical' | 'silent' | 'early-adopter' | 'practical' | 'trend-follower';
 type ProductMode = 'random' | 'custom';
+type TimeOption = '5' | '10';
+
+interface Customer {
+  id: string;
+  name: string;
+  personality: CustomerPersonality;
+  status: 'unsure' | 'interested' | 'convinced' | 'not-interested';
+  emoji: string;
+}
+
+interface CustomerResult {
+  customerId: string;
+  customerName: string;
+  convinced: boolean;
+  score: number;
+  feedback: string;
+}
 
 interface Message {
   id: string;
@@ -20,16 +37,20 @@ interface Message {
   timestamp: number;
 }
 
-interface ChallengeResult {
+interface CampaignResult {
   won: boolean;
   feedback: string;
   strengths: string[];
   improvements: string[];
   score: number;
   xpEarned: number;
+  customerResults?: CustomerResult[];
+  customersConvinced?: number;
+  totalCustomers?: number;
 }
 
 const randomProducts = [
+  // Original products
   'Premium Ballpoint Pen',
   'Stainless Steel Water Bottle',
   'Wireless Bluetooth Earbuds',
@@ -40,33 +61,55 @@ const randomProducts = [
   'Coffee Mug with Temperature Control',
   'Umbrella with Auto-Open Feature',
   'Notebook with Smart Pages',
+  // New diverse products
+  'Monthly Meditation App Subscription',
+  'Professional LinkedIn Profile Makeover Service',
+  'Ergonomic Standing Desk Converter',
+  'AI-Powered Resume Builder (SaaS)',
+  'Organic Meal Prep Delivery Service',
+  'Virtual Assistant Service (10 hours/month)',
+  'Cloud Storage Plan (1TB)',
+  'Custom Business Logo Design Package',
+  'Noise-Canceling Desk Lamp',
+  'Project Management Software License',
 ];
 
-const personalities: Record<BuyerPersonality, { name: string; description: string; emoji: string }> = {
-  skeptic: { name: 'The Skeptic', description: 'Questions everything, needs proof', emoji: '🤨' },
-  researcher: { name: 'The Researcher', description: 'Compares with competitors', emoji: '📊' },
-  budget: { name: 'Budget Buyer', description: 'Price-conscious, seeks value', emoji: '💰' },
-  quality: { name: 'Quality Seeker', description: 'Premium buyer, wants the best', emoji: '⭐' },
+const personalities: Record<CustomerPersonality, { name: string; description: string; emoji: string }> = {
+  skeptic: { name: 'The Skeptic', description: 'Questions everything, needs strong value prop', emoji: '🤨' },
+  researcher: { name: 'The Researcher', description: 'Compares with competitors, needs differentiation', emoji: '📊' },
+  budget: { name: 'Budget Conscious', description: 'Price-conscious, seeks ROI/value', emoji: '💰' },
+  quality: { name: 'Quality Seeker', description: 'Premium buyer, wants positioning', emoji: '⭐' },
   impulsive: { name: 'The Impulsive', description: 'Quick decisions, easily excited', emoji: '⚡' },
   technical: { name: 'The Technical', description: 'Wants specs and details', emoji: '🔬' },
   silent: { name: 'The Silent Type', description: 'Minimal responses, hard to read', emoji: '🤐' },
+  'early-adopter': { name: 'Early Adopter', description: 'Wants uniqueness and innovation', emoji: '🚀' },
+  practical: { name: 'The Practical', description: 'Needs practical benefits', emoji: '🔧' },
+  'trend-follower': { name: 'Trend Follower', description: 'Wants social proof and popularity', emoji: '📈' },
 };
 
-const SalesChallenge: React.FC = () => {
-  const [stage, setStage] = useState<'setup' | 'challenge' | 'result'>('setup');
-  const [mode, setMode] = useState<ChallengeMode>('quick');
+// Customer name generation
+const customerNames = [
+  'Sarah', 'Alex', 'Jordan', 'Taylor', 'Casey', 'Morgan', 'Riley', 'Avery', 'Quinn', 'Blake',
+  'Cameron', 'Drew', 'Emery', 'Finley', 'Hayden', 'Jamie', 'Kendall', 'Logan', 'Parker', 'Reese'
+];
+
+const PromotionCampaign: React.FC = () => {
+  const [stage, setStage] = useState<'setup' | 'campaign' | 'result'>('setup');
+  const [mode, setMode] = useState<CampaignMode>('basic');
+  const [timeOption, setTimeOption] = useState<TimeOption>('5');
   const [productMode, setProductMode] = useState<ProductMode>('random');
   const [customProduct, setCustomProduct] = useState('');
   const [customDescription, setCustomDescription] = useState('');
   const [selectedProduct, setSelectedProduct] = useState('');
-  const [personality, setPersonality] = useState<BuyerPersonality>('skeptic');
+  const [personality, setPersonality] = useState<CustomerPersonality>('skeptic');
+  const [customers, setCustomers] = useState<Customer[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isAITyping, setIsAITyping] = useState(false);
   const [conversationStarted, setConversationStarted] = useState(false);
-  const [timer, setTimer] = useState(120); // 2 minutes for quick mode
-  const [result, setResult] = useState<ChallengeResult | null>(null);
-  const [challengeAttempts, setChallengeAttempts] = useState(0);
+  const [timer, setTimer] = useState(300); // 5 minutes default
+  const [result, setResult] = useState<CampaignResult | null>(null);
+  const [campaignAttempts, setCampaignAttempts] = useState(0);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const incrementAI = useAppStore((state) => state.incrementAIInteractions);
@@ -78,17 +121,56 @@ const SalesChallenge: React.FC = () => {
   
   useEffect(() => {
     // Only run timer if AI is NOT typing (fair time for student)
-    if (conversationStarted && timer > 0 && stage === 'challenge' && !isAITyping) {
+    if (conversationStarted && timer > 0 && stage === 'campaign' && !isAITyping) {
       const interval = setInterval(() => {
         setTimer((prev) => prev - 1);
       }, 1000);
       return () => clearInterval(interval);
-    } else if (timer === 0 && stage === 'challenge') {
+    } else if (timer === 0 && stage === 'campaign') {
       handleTimeUp();
     }
   }, [conversationStarted, timer, stage, isAITyping]);
   
-  const startChallenge = () => {
+  const generateCustomers = (): Customer[] => {
+    if (mode === 'basic') {
+      // Single customer for basic mode
+      const personality = Object.keys(personalities)[Math.floor(Math.random() * Object.keys(personalities).length)] as CustomerPersonality;
+      const name = customerNames[Math.floor(Math.random() * customerNames.length)];
+      return [{
+        id: `customer-1`,
+        name,
+        personality,
+        status: 'unsure',
+        emoji: personalities[personality].emoji
+      }];
+    } else {
+      // 2-4 customers for boss mode
+      const numCustomers = Math.floor(Math.random() * 3) + 2; // 2, 3, or 4
+      const availablePersonalities = Object.keys(personalities) as CustomerPersonality[];
+      const selectedPersonalities = [];
+      
+      // Ensure unique personalities
+      while (selectedPersonalities.length < numCustomers) {
+        const randomPersonality = availablePersonalities[Math.floor(Math.random() * availablePersonalities.length)];
+        if (!selectedPersonalities.includes(randomPersonality)) {
+          selectedPersonalities.push(randomPersonality);
+        }
+      }
+      
+      return selectedPersonalities.map((personality, index) => {
+        const name = customerNames[Math.floor(Math.random() * customerNames.length)];
+        return {
+          id: `customer-${index + 1}`,
+          name,
+          personality,
+          status: 'unsure',
+          emoji: personalities[personality].emoji
+        };
+      });
+    }
+  };
+
+  const startCampaign = () => {
     let product = '';
     if (productMode === 'random') {
       product = randomProducts[Math.floor(Math.random() * randomProducts.length)];
@@ -97,29 +179,68 @@ const SalesChallenge: React.FC = () => {
     }
     
     setSelectedProduct(product);
-    const randomPersonality = Object.keys(personalities)[Math.floor(Math.random() * Object.keys(personalities).length)] as BuyerPersonality;
-    setPersonality(randomPersonality);
-    setStage('challenge');
-    setChallengeAttempts(prev => prev + 1);
     
-    // Set timer based on mode (extended for better conversations)
-    if (mode === 'quick') setTimer(300); // 5 minutes (was 2 minutes)
-    else if (mode === 'full') setTimer(600); // 10 minutes (was 7 minutes)
-    else setTimer(900); // 15 minutes (was 10 minutes)
+    // Generate customers based on mode
+    const generatedCustomers = generateCustomers();
+    setCustomers(generatedCustomers);
     
-    // AI sends opening message based on personality
-    const openings: Record<BuyerPersonality, string> = {
-      skeptic: "Okay... I'm listening. But I've heard sales pitches before. Convince me. 🤨",
-      researcher: "Hi. I've done my research on similar products. What makes yours different? 📊",
-      budget: "Hello. Before you start, what's the price? I'm on a tight budget. 💰",
-      quality: "Good day. I only buy premium quality. Is this the best you have? ⭐",
-      impulsive: "Hey! Ooh, what are you selling? Tell me quick! 🤩",
-      technical: "Hello. I need full technical specifications before making any decision. 🔧",
-      silent: "...Go ahead. 👀",
-    };
+    if (mode === 'basic') {
+      setPersonality(generatedCustomers[0].personality);
+    }
     
+    setStage('campaign');
+    setCampaignAttempts(prev => prev + 1);
+    
+    // Set timer based on mode and time option
+    if (mode === 'basic') {
+      setTimer(timeOption === '5' ? 300 : 600); // 5 or 10 minutes
+    } else {
+      setTimer(1200); // 20 minutes for boss mode
+    }
+    
+    // AI sends opening message based on mode
     setTimeout(() => {
-      sendAIMessage(openings[randomPersonality] || "Hello. So you want to sell me something? Go ahead, I'm listening...");
+      if (mode === 'basic') {
+        // Single customer opening
+        const customer = generatedCustomers[0];
+        const openings: Record<CustomerPersonality, string> = {
+          skeptic: "Why should I care about this product? I've seen similar things before. 🤨",
+          researcher: "I've researched similar products. What makes this different? 📊",
+          budget: "What's the value here? I need to know if it's worth my time. 💰",
+          quality: "Is this actually better than what I have now? I only want the best. ⭐",
+          impulsive: "Ooh, tell me about this! What makes it special? 🤩",
+          technical: "I need to understand how this works and what the benefits are. 🔧",
+          silent: "I'm listening... 👀",
+          'early-adopter': "What's new and innovative about this? I love trying new things! 🚀",
+          practical: "How exactly will this help me in my daily life? 🔧",
+          'trend-follower': "Is this popular? What do other people think about it? 📈",
+        };
+        sendAIMessage(`${customer.name}: ${openings[customer.personality]}`);
+      } else {
+        // Multiple customers opening (1-2 random customers respond)
+        const respondingCustomers = generatedCustomers
+          .sort(() => 0.5 - Math.random())
+          .slice(0, Math.floor(Math.random() * 2) + 1); // 1 or 2 customers
+        
+        const openings: Record<CustomerPersonality, string> = {
+          skeptic: "Why should I care about this product?",
+          researcher: "What makes this different from competitors?",
+          budget: "What's the value proposition here?",
+          quality: "Is this actually better than what I have now?",
+          impulsive: "Tell me about this! What makes it special?",
+          technical: "How does this work and what are the benefits?",
+          silent: "I'm listening...",
+          'early-adopter': "What's new and innovative about this?",
+          practical: "How will this help me in my daily life?",
+          'trend-follower': "Is this popular? What do others think?",
+        };
+        
+        const openingMessages = respondingCustomers.map(customer => 
+          `${customer.name}: ${openings[customer.personality]}`
+        ).join('\n\n');
+        
+        sendAIMessage(openingMessages);
+      }
       setConversationStarted(true);
     }, 1000);
   };
@@ -154,63 +275,62 @@ const SalesChallenge: React.FC = () => {
         `${m.sender === 'user' ? 'Student' : 'Buyer'}: ${m.text}`
       ).join('\n');
       
-      const personalityData = personalities[personality];
       const productInfo = productMode === 'custom' && customDescription 
         ? `${selectedProduct} - ${customDescription}`
         : selectedProduct;
       
       const difficultyPrompt = mode === 'boss' 
-        ? 'EXTREMELY TOUGH - Only buy if absolutely convinced. 5-10% win rate.'
-        : mode === 'full'
-        ? 'VERY SKEPTICAL - Need solid proof. 15% win rate.'
-        : 'SKEPTICAL - Show me why I need this. 20% win rate.';
+        ? 'EXTREMELY TOUGH - Only show interest if absolutely convinced. 50% success rate.'
+        : 'SKEPTICAL - Show me why I should care about this. 30% success rate.';
       
-      const prompt = `You are a REAL buyer in a sales conversation. Act naturally with emotions and reactions.
+      const prompt = mode === 'basic' 
+        ? `You are a REAL customer in a marketing conversation. Act naturally with emotions and reactions.
 
-BUYER PROFILE:
-- Personality: ${personalityData.name} - ${personalityData.description}
-- Product being sold: "${productInfo}"
+CUSTOMER PROFILE:
+- Personality: ${personalities[personality].name} - ${personalities[personality].description}
+- Product being promoted: "${productInfo}"
 - Your mood: ${difficultyPrompt}
 
 CONVERSATION SO FAR:
 ${conversationHistory}
 
-LATEST MESSAGE FROM SELLER:
+LATEST MESSAGE FROM MARKETER:
 "${inputValue}"
 
-HOW TO ACT LIKE A REAL BUYER WITH EMOJIS:
+HOW TO ACT LIKE A REAL CUSTOMER WITH EMOJIS:
 
 1. SHOW EMOTIONS & REACTIONS:
    - Curious: "Hmm, tell me more... 🤔", "Interesting... 🧐", "Go on... 👀"
-   - Skeptical: "I'm not convinced 😒", "Prove it 🤨", "Really? 🤷‍♂️"
+   - Skeptical: "I'm not convinced 😒", "Why should I care? 🤨", "Really? 🤷‍♂️"
    - Interested: "Wait, that sounds good! 😮", "Oh! 😯", "I like that 👍"
-   - Frustrated: "Ugh, too expensive 💸", "This isn't for me 😤", "I don't get it 🤯"
+   - Frustrated: "This isn't relevant to me 😤", "I don't get it 🤯", "Not for me 🙅‍♂️"
    - Excited: "Wow! 🤩", "That's exactly what I need! 🎯", "Amazing! ✨"
 
 2. ACT ACCORDING TO YOUR PERSONALITY:
-   ${personality === 'skeptic' ? '- Question everything: "Prove it 🤨", "How do I know? 🤔", "I doubt that 🙄", "Show me evidence 📊"' : ''}
+   ${personality === 'skeptic' ? '- Question value: "Why should I care? 🤨", "What's the point? 🤔", "I doubt that 🙄", "Show me the benefit 📊"' : ''}
    ${personality === 'researcher' ? '- Compare: "What about [competitor]? 🔍", "I read that... 📚", "The reviews say... ⭐", "Let me check... 🔎"' : ''}
-   ${personality === 'budget' ? '- Focus on price: "Too expensive 💰", "Can you do better? 💸", "What\'s the cheapest option? 🏷️", "Any discounts? 🎫"' : ''}
-   ${personality === 'quality' ? '- Demand premium: "Is this the best? ⭐", "What makes it special? 💎", "I want top quality 👑", "Show me the craftsmanship 🔨"' : ''}
-   ${personality === 'impulsive' ? '- Get excited: "Ooh! 🤩", "I want it! 😍", "Sold! 🎉", "Let\'s do this! 🚀", "Tell me more! 🔥"' : ''}
-   ${personality === 'technical' ? '- Ask specs: "What are the exact specs? 🔧", "How does it work? ⚙️", "Technical details? 📋", "What\'s the capacity? 📊"' : ''}
+   ${personality === 'budget' ? '- Focus on value: "What's the ROI? 💰", "Is it worth it? 💸", "What's the benefit? 🏷️", "Show me the value 🎫"' : ''}
+   ${personality === 'quality' ? '- Demand premium: "Is this the best? ⭐", "What makes it special? 💎", "I want top quality 👑", "Show me the quality 🔨"' : ''}
+   ${personality === 'impulsive' ? '- Get excited: "Ooh! 🤩", "I want it! 😍", "Tell me more! 🚀", "This sounds great! 🔥"' : ''}
+   ${personality === 'technical' ? '- Ask details: "How does it work? 🔧", "What are the features? ⚙️", "Technical details? 📋", "What's the process? 📊"' : ''}
    ${personality === 'silent' ? '- Be brief: "Okay 👍", "Hmm 🤔", "And? 👀", "Go on... ➡️", "I see 👁️"' : ''}
+   ${personality === 'early-adopter' ? '- Seek innovation: "What's new? 🚀", "How is this different? 💡", "What's unique? ✨", "I love new things! 🔥"' : ''}
+   ${personality === 'practical' ? '- Focus on benefits: "How will this help me? 🔧", "What's the practical use? 💪", "Real benefits? 📈", "Daily impact? ⚡"' : ''}
+   ${personality === 'trend-follower' ? '- Want social proof: "Is this popular? 📈", "What do others say? 👥", "Any testimonials? ⭐", "Social proof? 🏆"' : ''}
 
-3. ASK REALISTIC QUESTIONS based on product type:
-   ${productInfo.toLowerCase().includes('tech') || productInfo.toLowerCase().includes('app') || productInfo.toLowerCase().includes('software') ? 
-     '- "What about data security?", "Does it work on mobile?", "What if it breaks?"' : ''}
-   ${productInfo.toLowerCase().includes('service') || productInfo.toLowerCase().includes('freelance') ? 
-     '- "What\'s your experience?", "Can I see examples?", "How much per hour?"' : ''}
-   - "Why is this better than [competitor]?"
-   - "What if I don\'t like it?"
-   - "How much does it cost exactly?"
+3. ASK MARKETING-FOCUSED QUESTIONS:
+   - "Why should I care about this?"
+   - "What problem does this solve?"
+   - "How is this different from alternatives?"
+   - "What's the benefit to me?"
+   - "Who else uses this?"
 
-4. SHOW BUYING SIGNALS IF CONVINCED:
+4. SHOW INTEREST SIGNALS IF CONVINCED:
    - "Okay, I'm starting to see the value 💡"
-   - "Tell me more about the pricing 💰"
-   - "What are the next steps? 🚀"
-   - "How do I get this? 🛒"
-   - "I'll buy it! 🎉" (ONLY if truly convinced)
+   - "Tell me more about the benefits 💰"
+   - "How do I learn more? 🚀"
+   - "This sounds interesting! 🛒"
+   - "I'm interested! 🎉" (ONLY if truly convinced)
 
 5. STAY IN CHARACTER & BE BRIEF:
    - Max 2-3 sentences
@@ -219,7 +339,40 @@ HOW TO ACT LIKE A REAL BUYER WITH EMOJIS:
    - React emotionally
    - Remember what was said before
 
-RESPOND NOW as the buyer (20-40 words max):`;
+RESPOND NOW as the customer (20-40 words max):`
+        : `You are multiple REAL customers in a marketing conversation. Act naturally with emotions and reactions.
+
+CUSTOMERS PRESENT:
+${customers.map(c => `- ${c.name} (${personalities[c.personality].name}): ${personalities[c.personality].description}`).join('\n')}
+- Product being promoted: "${productInfo}"
+- Your mood: ${difficultyPrompt}
+
+CONVERSATION SO FAR:
+${conversationHistory}
+
+LATEST MESSAGE FROM MARKETER:
+"${inputValue}"
+
+HOW TO ACT LIKE REAL CUSTOMERS:
+
+1. NOT ALL CUSTOMERS RESPOND EVERY TIME (randomize 1-3 customers)
+2. EACH CUSTOMER HAS DIFFERENT CONCERNS:
+   - Skeptic: "Why should I care?", "What's the point?"
+   - Researcher: "How is this different?", "What about competitors?"
+   - Budget: "What's the value?", "Is it worth it?"
+   - Quality: "Is this the best?", "What makes it special?"
+   - Impulsive: "Tell me more!", "This sounds great!"
+   - Technical: "How does it work?", "What are the features?"
+   - Silent: "Hmm...", "I see..."
+   - Early Adopter: "What's new?", "How is this innovative?"
+   - Practical: "How will this help me?", "What's the benefit?"
+   - Trend Follower: "Is this popular?", "What do others think?"
+
+3. FORMAT: "Customer Name: message\n\nCustomer Name: message"
+4. BE BRIEF: Max 1-2 sentences per customer
+5. SHOW INTEREST IF CONVINCED: "I'm interested!", "Tell me more!", "This sounds good!"
+
+RESPOND NOW as 1-3 random customers (format: "Name: message"):`;
       
       // Use Groq for FAST AI responses (< 1 second!)
       const timeoutPromise = new Promise((_, reject) => 
@@ -254,9 +407,9 @@ RESPOND NOW as the buyer (20-40 words max):`;
       setIsAITyping(false);
       sendAIMessage(aiResponse);
       
-      // Check if conversation should end (if AI mentions buying or refusing strongly)
+      // Check if conversation should end (if AI mentions interest or refusing strongly)
       const lowerResponse = aiResponse.toLowerCase();
-      if (lowerResponse.includes("i'll buy it") || lowerResponse.includes("you've convinced me") || lowerResponse.includes("deal") || lowerResponse.includes("sold")) {
+      if (lowerResponse.includes("i'm interested") || lowerResponse.includes("you've convinced me") || lowerResponse.includes("this sounds good") || lowerResponse.includes("tell me more")) {
         setTimeout(() => evaluateConversation(true), 2000);
       }
       
@@ -283,35 +436,36 @@ RESPOND NOW as the buyer (20-40 words max):`;
     evaluateConversation(false);
   };
   
-  const evaluateConversation = async (buyerInterested: boolean) => {
+  const evaluateConversation = async (customersInterested: boolean) => {
     setIsAITyping(true);
     
     try {
       const conversationHistory = messages.map(m => 
-        `${m.sender === 'user' ? 'Student' : 'Buyer'}: ${m.text}`
+        `${m.sender === 'user' ? 'Marketer' : 'Customer'}: ${m.text}`
       ).join('\n');
       
       const productInfo = productMode === 'custom' && customDescription 
         ? `${selectedProduct} - ${customDescription}`
         : selectedProduct;
       
-      const prompt = `You are evaluating a sales conversation. The student tried to sell: "${productInfo}"
-Buyer personality: ${personalities[personality].name}
-Challenge mode: ${mode}
-Time limit: ${mode === 'quick' ? '5 minutes' : mode === 'full' ? '10 minutes' : '15 minutes'}
+      const prompt = mode === 'basic' 
+        ? `You are evaluating a marketing campaign. The marketer tried to promote: "${productInfo}"
+Customer personality: ${personalities[personality].name}
+Campaign mode: ${mode}
+Time limit: ${timeOption} minutes
 
 Full conversation:
 ${conversationHistory}
 
-Evaluate the student's performance:
-1. Did they demonstrate good marketing knowledge (4Ps, AIDA, feature-benefit, urgency, etc.)?
+Evaluate the marketer's performance:
+1. Did they demonstrate good marketing knowledge (AIDA, value proposition, positioning, benefits, etc.)?
 2. Did they handle objections well?
-3. Did they adapt to the buyer's personality?
-4. Did they make a compelling case?
+3. Did they adapt to the customer's personality?
+4. Did they create interest and desire?
 
-Based on difficulty (${mode === 'boss' ? '5-10%' : mode === 'full' ? '15%' : '20%'} win rate), decide if the buyer would actually buy.
+Based on difficulty (${mode === 'boss' ? '50%' : '30%'} success rate), decide if the customer would be interested.
 
-Be TOUGH in your evaluation. Only grant a win if the student truly demonstrated excellent sales and marketing skills.
+Be TOUGH in your evaluation. Only grant a win if the marketer truly demonstrated excellent marketing skills.
 
 IMPORTANT: Return ONLY a valid JSON object with this exact structure (no markdown, no extra text):
 {
@@ -320,6 +474,44 @@ IMPORTANT: Return ONLY a valid JSON object with this exact structure (no markdow
   "strengths": ["strength 1", "strength 2", "strength 3"],
   "improvements": ["improvement 1", "improvement 2", "improvement 3"],
   "score": number between 0-100
+}`
+        : `You are evaluating a multi-customer marketing campaign. The marketer tried to promote: "${productInfo}"
+Customers present: ${customers.map(c => `${c.name} (${personalities[c.personality].name})`).join(', ')}
+Campaign mode: ${mode}
+Time limit: 20 minutes
+
+Full conversation:
+${conversationHistory}
+
+Evaluate the marketer's performance:
+1. Did they demonstrate good marketing knowledge (AIDA, value proposition, positioning, benefits, etc.)?
+2. Did they handle objections from different customer types?
+3. Did they adapt to multiple customer personalities?
+4. Did they create interest and desire across the group?
+
+Based on difficulty (50% success rate), decide which customers would be interested.
+
+For each customer, evaluate individually:
+${customers.map(c => `- ${c.name} (${personalities[c.personality].name}): convinced or not, score 0-100, brief feedback`).join('\n')}
+
+Be TOUGH in your evaluation. Only grant wins if the marketer truly demonstrated excellent marketing skills.
+
+IMPORTANT: Return ONLY a valid JSON object with this exact structure (no markdown, no extra text):
+{
+  "won": true or false,
+  "feedback": "overall feedback string",
+  "strengths": ["strength 1", "strength 2", "strength 3"],
+  "improvements": ["improvement 1", "improvement 2", "improvement 3"],
+  "score": number between 0-100,
+  "customerResults": [
+    {
+      "customerId": "customer-1",
+      "customerName": "Name",
+      "convinced": true or false,
+      "score": number 0-100,
+      "feedback": "brief feedback string"
+    }
+  ]
 }`;
       
       const response = await groq.chat.completions.create({
@@ -351,12 +543,15 @@ IMPORTANT: Return ONLY a valid JSON object with this exact structure (no markdow
       }
       
       const xpEarned = evaluation.won 
-        ? (mode === 'boss' ? 500 : mode === 'full' ? 200 : 100)
+        ? (mode === 'boss' ? 300 : 100)
         : 10;
       
-      const finalResult: ChallengeResult = {
+      const finalResult: CampaignResult = {
         ...evaluation,
         xpEarned,
+        customerResults: evaluation.customerResults,
+        customersConvinced: evaluation.customerResults?.filter(r => r.convinced).length || 0,
+        totalCustomers: customers.length,
       };
       
       setResult(finalResult);
@@ -364,7 +559,7 @@ IMPORTANT: Return ONLY a valid JSON object with this exact structure (no markdow
       setIsAITyping(false);
       
       // Award XP
-      earnXP(xpEarned, evaluation.won ? `Won Sales Challenge: ${selectedProduct}` : 'Sales Challenge Attempt');
+      earnXP(xpEarned, evaluation.won ? `Successful Campaign: ${selectedProduct}` : 'Campaign Attempt');
       incrementAI();
       
     } catch (error) {
@@ -382,7 +577,7 @@ IMPORTANT: Return ONLY a valid JSON object with this exact structure (no markdow
     }
   };
   
-  const resetChallenge = () => {
+  const resetCampaign = () => {
     setStage('setup');
     setMessages([]);
     setInputValue('');
@@ -390,6 +585,7 @@ IMPORTANT: Return ONLY a valid JSON object with this exact structure (no markdow
     setResult(null);
     setCustomProduct('');
     setCustomDescription('');
+    setCustomers([]);
   };
   
   const formatTime = (seconds: number) => {
@@ -400,9 +596,9 @@ IMPORTANT: Return ONLY a valid JSON object with this exact structure (no markdow
   
   return (
     <div>
-      <h1 className="text-3xl font-bold font-heading mb-2">AI Sales Challenge</h1>
+      <h1 className="text-3xl font-bold font-heading mb-2">🎯 Product Promotion Campaign</h1>
       <p className="text-slate-500 dark:text-slate-400 mb-8">
-        Face a tough AI buyer and prove your sales skills. Only 20% win rate - can you close the deal?
+        Test your marketing skills by promoting products to real audience members. Can you create desire and drive interest?
       </p>
       
       <AnimatePresence mode="wait">
@@ -414,20 +610,19 @@ IMPORTANT: Return ONLY a valid JSON object with this exact structure (no markdow
             exit={{ opacity: 0, y: -20 }}
             className="space-y-6"
           >
-            {/* Challenge Mode Selection */}
+            {/* Campaign Mode Selection */}
             <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg">
-              <h2 className="text-xl font-bold font-heading mb-4">Select Challenge Mode</h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <h2 className="text-xl font-bold font-heading mb-4">Select Campaign Mode</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                  {[
-                   { id: 'quick', name: 'Quick Pitch', time: '5 min', difficulty: '20%', emoji: '⚡' },
-                   { id: 'full', name: 'Full Presentation', time: '10 min', difficulty: '15%', emoji: '🎯' },
-                   { id: 'boss', name: 'Boss Battle', time: '15 min', difficulty: '5-10%', emoji: '🔥', locked: challengeAttempts < 10 },
+                   { id: 'basic', name: 'Basic Campaign', time: '5-10 min', difficulty: '30%', emoji: '⚡', xp: '100-200 XP' },
+                   { id: 'boss', name: 'Boss Mode', time: '20 min', difficulty: '50%', emoji: '🔥', xp: '300 XP', locked: campaignAttempts < 10 },
                  ].map((m) => (
                   <button
                     key={m.id}
-                    onClick={() => !m.locked && setMode(m.id as ChallengeMode)}
+                    onClick={() => !m.locked && setMode(m.id as CampaignMode)}
                     disabled={m.locked}
-                    className={`p-4 rounded-xl transition-all ${
+                    className={`p-6 rounded-xl transition-all ${
                       mode === m.id
                         ? 'bg-gradient-to-br from-coral-500 to-warm-yellow-500 text-white shadow-xl'
                         : m.locked
@@ -435,14 +630,42 @@ IMPORTANT: Return ONLY a valid JSON object with this exact structure (no markdow
                         : 'bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600'
                     }`}
                   >
-                    <div className="text-3xl mb-2">{m.emoji}</div>
-                    <h3 className="font-bold">{m.name}</h3>
-                    <p className="text-sm opacity-90">{m.time} • {m.difficulty} win rate</p>
-                    {m.locked && <p className="text-xs mt-2">🔒 Complete 10 challenges</p>}
+                    <div className="text-4xl mb-3">{m.emoji}</div>
+                    <h3 className="font-bold text-lg mb-2">{m.name}</h3>
+                    <p className="text-sm opacity-90 mb-1">{m.time} • {m.difficulty} success rate</p>
+                    <p className="text-xs opacity-75">{m.xp}</p>
+                    {m.locked && <p className="text-xs mt-2">🔒 Complete 10 campaigns</p>}
                   </button>
                 ))}
               </div>
             </div>
+            
+            {/* Time Selection for Basic Mode */}
+            {mode === 'basic' && (
+              <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg">
+                <h2 className="text-xl font-bold font-heading mb-4">Choose Campaign Duration</h2>
+                <div className="grid grid-cols-2 gap-4">
+                  {[
+                    { id: '5', name: 'Quick Campaign', time: '5 min', xp: '100 XP', emoji: '⚡' },
+                    { id: '10', name: 'Extended Campaign', time: '10 min', xp: '200 XP', emoji: '🎯' },
+                  ].map((t) => (
+                    <button
+                      key={t.id}
+                      onClick={() => setTimeOption(t.id as TimeOption)}
+                      className={`p-4 rounded-xl transition-all ${
+                        timeOption === t.id
+                          ? 'bg-gradient-to-br from-deep-blue-500 to-deep-blue-600 text-white shadow-xl'
+                          : 'bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600'
+                      }`}
+                    >
+                      <div className="text-2xl mb-2">{t.emoji}</div>
+                      <h3 className="font-bold">{t.name}</h3>
+                      <p className="text-sm opacity-90">{t.time} • {t.xp}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             
             {/* Product Selection */}
             <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg">
@@ -459,7 +682,7 @@ IMPORTANT: Return ONLY a valid JSON object with this exact structure (no markdow
                 >
                   <div className="text-3xl mb-2">🎲</div>
                   <h3 className="font-bold text-lg mb-1">Surprise Me!</h3>
-                  <p className="text-sm opacity-90">Get a random product to sell</p>
+                  <p className="text-sm opacity-90">Get a random product to promote (20 products)</p>
                 </button>
                 
                 <button
@@ -472,7 +695,7 @@ IMPORTANT: Return ONLY a valid JSON object with this exact structure (no markdow
                 >
                   <div className="text-3xl mb-2">✏️</div>
                   <h3 className="font-bold text-lg mb-1">My Product</h3>
-                  <p className="text-sm opacity-90">Sell YOUR own product/service</p>
+                  <p className="text-sm opacity-90">Promote YOUR own product/service</p>
                 </button>
               </div>
               
@@ -513,19 +736,19 @@ IMPORTANT: Return ONLY a valid JSON object with this exact structure (no markdow
             {/* Start Button */}
             <div className="flex justify-center">
               <motion.button
-                onClick={startChallenge}
+                onClick={startCampaign}
                 disabled={productMode === 'custom' && !customProduct.trim()}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 className="px-12 py-4 bg-gradient-to-r from-coral-500 to-warm-yellow-500 text-white text-xl font-bold rounded-xl shadow-xl hover:shadow-2xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                🚀 Start Challenge
+                🚀 Start Campaign
               </motion.button>
             </div>
           </motion.div>
         )}
         
-        {stage === 'challenge' && (
+        {stage === 'campaign' && (
           <motion.div
             key="challenge"
             initial={{ opacity: 0 }}
@@ -533,16 +756,16 @@ IMPORTANT: Return ONLY a valid JSON object with this exact structure (no markdow
             exit={{ opacity: 0 }}
             className="space-y-4"
           >
-            {/* Challenge Info Bar */}
+            {/* Campaign Info Bar */}
             <div className="bg-gradient-to-r from-deep-blue-500 to-deep-blue-600 text-white p-4 rounded-xl flex items-center justify-between">
               <div>
-                <p className="text-sm opacity-90">Selling:</p>
+                <p className="text-sm opacity-90">Promoting:</p>
                 <p className="font-bold text-lg">{selectedProduct}</p>
               </div>
               <div className="text-center">
-                <p className="text-sm opacity-90">Buyer Type:</p>
+                <p className="text-sm opacity-90">Mode:</p>
                 <p className="font-bold">
-                  {personalities[personality].emoji} {personalities[personality].name}
+                  {mode === 'basic' ? '⚡ Basic Campaign' : '🔥 Boss Mode'}
                 </p>
               </div>
               <div className="text-right">
@@ -552,6 +775,28 @@ IMPORTANT: Return ONLY a valid JSON object with this exact structure (no markdow
                 </p>
               </div>
             </div>
+            
+            {/* Customer Panel for Boss Mode */}
+            {mode === 'boss' && customers.length > 0 && (
+              <div className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-lg">
+                <h3 className="text-lg font-bold font-heading mb-3 text-center">Target Audience Panel</h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {customers.map((customer) => (
+                    <div key={customer.id} className="text-center p-3 bg-slate-50 dark:bg-slate-700 rounded-lg">
+                      <div className="text-2xl mb-1">{customer.emoji}</div>
+                      <p className="font-semibold text-sm">{customer.name}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">{personalities[customer.personality].name}</p>
+                      <div className="mt-1">
+                        {customer.status === 'convinced' && <span className="text-green-500">✅</span>}
+                        {customer.status === 'interested' && <span className="text-blue-500">😊</span>}
+                        {customer.status === 'unsure' && <span className="text-yellow-500">😐</span>}
+                        {customer.status === 'not-interested' && <span className="text-red-500">❌</span>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             
             {/* Chat Interface */}
             <div className="bg-gradient-to-b from-slate-50 to-white dark:from-slate-900 dark:to-slate-800 rounded-2xl shadow-xl overflow-hidden border-2 border-slate-200 dark:border-slate-700">
@@ -567,7 +812,7 @@ IMPORTANT: Return ONLY a valid JSON object with this exact structure (no markdow
                     <div className="flex items-end gap-2 max-w-[75%]">
                       {message.sender === 'ai' && (
                         <div className="w-8 h-8 rounded-full bg-gradient-to-br from-deep-blue-400 to-deep-blue-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-                          {personalities[personality].emoji}
+                          {mode === 'basic' ? personalities[personality].emoji : '👥'}
                         </div>
                       )}
                       <div
@@ -600,7 +845,7 @@ IMPORTANT: Return ONLY a valid JSON object with this exact structure (no markdow
                     className="flex justify-start items-end gap-2"
                   >
                     <div className="w-8 h-8 rounded-full bg-gradient-to-br from-deep-blue-400 to-deep-blue-600 flex items-center justify-center text-white text-xs font-bold">
-                      {personalities[personality].emoji}
+                      {mode === 'basic' ? personalities[personality].emoji : '👥'}
                     </div>
                     <div className="bg-white dark:bg-slate-700 px-5 py-3 rounded-2xl rounded-bl-sm shadow-md border border-slate-200 dark:border-slate-600">
                       <div className="flex items-center gap-2">
@@ -610,7 +855,7 @@ IMPORTANT: Return ONLY a valid JSON object with this exact structure (no markdow
                           <div className="w-2 h-2 bg-deep-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.3s' }} />
                         </div>
                         <span className="text-xs text-slate-500 dark:text-slate-400 ml-2">
-                          {personalities[personality].name} is thinking...
+                          {mode === 'basic' ? `${personalities[personality].name} is thinking...` : 'Audience is thinking...'}
                         </span>
                       </div>
                       <p className="text-xs text-slate-400 mt-1 italic">⏸️ Timer paused</p>
@@ -623,13 +868,23 @@ IMPORTANT: Return ONLY a valid JSON object with this exact structure (no markdow
               
               {/* Input Area */}
               <div className="border-t-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4">
-                {mode === 'full' && messages.length === 1 && (
+                {mode === 'basic' && timeOption === '10' && messages.length === 1 && (
                   <div className="mb-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border-l-4 border-blue-500">
                     <p className="text-sm text-blue-800 dark:text-blue-300 font-semibold">
-                      💡 Full Presentation Tip: Follow the sales stages:
+                      💡 Extended Campaign Tip: Follow the AIDA model:
                     </p>
                     <p className="text-xs text-blue-700 dark:text-blue-400 mt-1">
-                      1. Greet & build rapport → 2. Ask about their needs → 3. Present your solution → 4. Handle objections → 5. Close the deal
+                      1. Create Awareness → 2. Generate Interest → 3. Build Desire → 4. Drive Action
+                    </p>
+                  </div>
+                )}
+                {mode === 'boss' && messages.length === 1 && (
+                  <div className="mb-3 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border-l-4 border-purple-500">
+                    <p className="text-sm text-purple-800 dark:text-purple-300 font-semibold">
+                      💡 Boss Mode Tip: Address different customer needs:
+                    </p>
+                    <p className="text-xs text-purple-700 dark:text-purple-400 mt-1">
+                      Each customer has different concerns. Address multiple needs in your messages to convince the majority.
                     </p>
                   </div>
                 )}
@@ -639,7 +894,7 @@ IMPORTANT: Return ONLY a valid JSON object with this exact structure (no markdow
                     value={inputValue}
                     onChange={(e) => setInputValue(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && !isAITyping && handleSendMessage()}
-                    placeholder={isAITyping ? "Wait for buyer to respond..." : "Type your message..."}
+                    placeholder={isAITyping ? "Wait for audience to respond..." : "Type your marketing message..."}
                     disabled={isAITyping}
                     className="flex-1 px-4 py-3 bg-slate-50 dark:bg-slate-900 border-2 border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-coral-500 focus:border-coral-500 outline-none disabled:opacity-50 transition-all text-[15px]"
                   />
@@ -687,7 +942,7 @@ IMPORTANT: Return ONLY a valid JSON object with this exact structure (no markdow
             }`}>
               <div className="text-6xl mb-4">{result.won ? '🎉' : '😔'}</div>
               <h2 className="text-3xl font-bold mb-2">
-                {result.won ? 'YOU MADE THE SALE!' : 'No Sale This Time'}
+                {result.won ? 'SUCCESSFUL CAMPAIGN!' : 'Campaign Needs Work'}
               </h2>
               <p className="text-xl opacity-90">+{result.xpEarned} XP</p>
               <div className="mt-4">
@@ -703,6 +958,39 @@ IMPORTANT: Return ONLY a valid JSON object with this exact structure (no markdow
                 {result.feedback}
               </p>
             </div>
+            
+            {/* Customer Results for Boss Mode */}
+            {mode === 'boss' && result.customerResults && (
+              <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg">
+                <h3 className="text-xl font-bold font-heading mb-4">Individual Customer Results</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {result.customerResults.map((customerResult, idx) => (
+                    <div key={idx} className={`p-4 rounded-xl border-2 ${
+                      customerResult.convinced 
+                        ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
+                        : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+                    }`}>
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-2xl">{customers.find(c => c.id === customerResult.customerId)?.emoji}</span>
+                        <h4 className="font-bold">{customerResult.customerName}</h4>
+                        {customerResult.convinced ? <span className="text-green-500">✅</span> : <span className="text-red-500">❌</span>}
+                      </div>
+                      <p className="text-sm text-slate-600 dark:text-slate-300 mb-2">
+                        Score: {customerResult.score}/100
+                      </p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        {customerResult.feedback}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-4 text-center">
+                  <p className="text-lg font-bold text-slate-700 dark:text-slate-300">
+                    {result.customersConvinced} out of {result.totalCustomers} customers convinced
+                  </p>
+                </div>
+              </div>
+            )}
             
             {/* Analysis */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -738,7 +1026,7 @@ IMPORTANT: Return ONLY a valid JSON object with this exact structure (no markdow
             {/* Actions */}
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <motion.button
-                onClick={resetChallenge}
+                onClick={resetCampaign}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 className="px-8 py-3 bg-gradient-to-r from-coral-500 to-warm-yellow-500 text-white font-bold rounded-lg shadow-lg"
@@ -759,5 +1047,5 @@ IMPORTANT: Return ONLY a valid JSON object with this exact structure (no markdow
   );
 };
 
-export default SalesChallenge;
+export default PromotionCampaign;
 

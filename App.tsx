@@ -20,7 +20,7 @@ import PositioningStudio from './pages/PositioningStudio';
 import ProductStrategyLab from './pages/ProductStrategyLab';
 import PricingLab from './pages/PricingLab';
 import PromotionLab from './pages/PromotionLab';
-import SalesChallenge from './pages/SalesChallenge';
+import PromotionCampaign from './pages/PromotionCampaign';
 
 function App() {
   const theme = useAppStore((state) => state.theme);
@@ -121,10 +121,10 @@ function App() {
                 </Layout>
               </ProtectedRoute>
             } />
-            <Route path="/sales-challenge" element={
+            <Route path="/promotion-campaign" element={
               <ProtectedRoute>
                 <Layout>
-                  <AnimatedPage><SalesChallenge /></AnimatedPage>
+                  <AnimatedPage><PromotionCampaign /></AnimatedPage>
                 </Layout>
               </ProtectedRoute>
             } />
