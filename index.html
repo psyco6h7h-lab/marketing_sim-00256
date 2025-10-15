@@ -8,8 +8,9 @@
     <meta name="description" content="Interactive AI-powered educational platform for learning marketing fundamentals" />
     <meta name="theme-color" content="#1e559f" />
     <title>Marketing Basics Simulator</title>
-    <meta name="version" content="3.0.0">
-    <meta name="build" content="2024-10-15-13:00">
+    <meta name="version" content="4.0.0">
+    <meta name="build" content="2024-10-15-14:30">
+    <meta name="cache-bust" content="nuclear-4.0.0">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, max-age=0">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
@@ -25,10 +26,10 @@
   </head>
   <body class="bg-slate-100 dark:bg-slate-900">
     <div id="root"></div>
-    <script type="module" src="/index.tsx?v=3.0.0&t=20241015130000"></script>
+    <script type="module" src="/index.tsx?v=4.0.0&t=20241015143000&nuclear=true"></script>
     <script>
-      // AGGRESSIVE CACHE BUSTING - FORCE FRESH CONTENT
-      console.log('🚀 Marketing Basics Simulator v3.0.0 - Cache Busting Active');
+      // NUCLEAR CACHE BUSTING - FORCE FRESH CONTENT v4.0.0
+      console.log('🚀 Marketing Basics Simulator v4.0.0 - NUCLEAR Cache Busting Active');
       
       // Clear all possible caches
       if ('caches' in window) {
@@ -48,15 +49,32 @@
         });
       }
       
-      // Force reload if old version detected
-      if (window.location.hash.includes('sales-challenge')) {
-        console.log('🔄 Detected old URL, redirecting to new version...');
-        window.location.replace('/#/promotion-campaign');
+      // NUCLEAR CACHE BUSTING - Force reload if old version detected
+      if (window.location.hash.includes('sales-challenge') || 
+          window.location.hash.includes('dashboard') ||
+          document.title.includes('Sales Challenge')) {
+        console.log('🔄 NUCLEAR: Detected old version, forcing redirect...');
+        window.location.replace('/#/promotion-campaign?nuclear=true&v=4.0.0');
+      }
+      
+      // Force page reload if old content detected
+      if (document.body.innerHTML.includes('Sales Challenge') || 
+          document.body.innerHTML.includes('AI Sales Challenge')) {
+        console.log('🔄 NUCLEAR: Old content detected, forcing reload...');
+        window.location.reload(true);
       }
       
       // Add timestamp to prevent caching
       const timestamp = new Date().getTime();
-      document.title = `Marketing Basics Simulator v3.0.0 - ${timestamp}`;
+      document.title = `Marketing Basics Simulator v4.0.0 - ${timestamp}`;
+      
+      // Force immediate redirect to new version
+      setTimeout(() => {
+        if (window.location.hash === '' || window.location.hash === '#/dashboard') {
+          console.log('🔄 NUCLEAR: Auto-redirecting to promotion campaign...');
+          window.location.replace('/#/promotion-campaign?nuclear=true&v=4.0.0');
+        }
+      }, 100);
     </script>
   </body>
 </html>

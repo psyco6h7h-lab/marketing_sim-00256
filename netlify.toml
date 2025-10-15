@@ -26,10 +26,22 @@
   force = true
   headers = { Cache-Control = "no-cache, no-store, must-revalidate" }
 
-# Specific redirect from old sales-challenge to new promotion-campaign
+# NUCLEAR REDIRECTS - Force new version
 [[redirects]]
   from = "/#/sales-challenge"
-  to = "/#/promotion-campaign"
+  to = "/#/promotion-campaign?nuclear=true&v=4.0.0"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/#/dashboard"
+  to = "/#/promotion-campaign?nuclear=true&v=4.0.0"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/"
+  to = "/#/promotion-campaign?nuclear=true&v=4.0.0"
   status = 301
   force = true
 
