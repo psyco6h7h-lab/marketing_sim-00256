@@ -26,6 +26,13 @@
   force = true
   headers = { Cache-Control = "no-cache, no-store, must-revalidate" }
 
+# Specific redirect from old sales-challenge to new promotion-campaign
+[[redirects]]
+  from = "/#/sales-challenge"
+  to = "/#/promotion-campaign"
+  status = 301
+  force = true
+
 # Headers for security and performance
 [[headers]]
   for = "/*"
@@ -37,8 +44,12 @@
     Referrer-Policy = "strict-origin-when-cross-origin"
     Permissions-Policy = "geolocation=(), microphone=(), camera=()"
     
-    # Cache control for static assets - shorter cache for better updates
-    Cache-Control = "public, max-age=3600, must-revalidate"
+    # AGGRESSIVE NO-CACHE - Force fresh content
+    Cache-Control = "no-cache, no-store, must-revalidate, max-age=0"
+    Pragma = "no-cache"
+    Expires = "0"
+    Last-Modified = "0"
+    ETag = "0"
 
 [[headers]]
   for = "/index.html"

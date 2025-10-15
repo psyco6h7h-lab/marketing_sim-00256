@@ -8,10 +8,13 @@
     <meta name="description" content="Interactive AI-powered educational platform for learning marketing fundamentals" />
     <meta name="theme-color" content="#1e559f" />
     <title>Marketing Basics Simulator</title>
-    <meta name="version" content="2.0.0">
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta name="version" content="3.0.0">
+    <meta name="build" content="2024-10-15-13:00">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, max-age=0">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
+    <meta http-equiv="Last-Modified" content="0">
+    <meta http-equiv="ETag" content="0">
     
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -77,9 +80,21 @@
   </head>
   <body class="bg-slate-100 dark:bg-slate-900">
     <div id="root"></div>
-    <script type="module" src="/index.tsx?v=2.0.0"></script>
+    <script type="module" src="/index.tsx?v=3.0.0&t=20241015130000"></script>
     <script>
-      // Force cache invalidation
+      // AGGRESSIVE CACHE BUSTING - FORCE FRESH CONTENT
+      console.log('🚀 Marketing Basics Simulator v3.0.0 - Cache Busting Active');
+      
+      // Clear all possible caches
+      if ('caches' in window) {
+        caches.keys().then(function(names) {
+          for (let name of names) {
+            caches.delete(name);
+          }
+        });
+      }
+      
+      // Unregister service workers
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.getRegistrations().then(function(registrations) {
           for(let registration of registrations) {
@@ -87,6 +102,16 @@
           }
         });
       }
+      
+      // Force reload if old version detected
+      if (window.location.hash.includes('sales-challenge')) {
+        console.log('🔄 Detected old URL, redirecting to new version...');
+        window.location.replace('/#/promotion-campaign');
+      }
+      
+      // Add timestamp to prevent caching
+      const timestamp = new Date().getTime();
+      document.title = `Marketing Basics Simulator v3.0.0 - ${timestamp}`;
     </script>
   </body>
 </html>
