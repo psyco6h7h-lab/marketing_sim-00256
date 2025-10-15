@@ -234,7 +234,7 @@ const PromotionCampaign: React.FC = () => {
         
         // Send opening messages from each customer individually
         respondingCustomers.forEach((customer, index) => {
-          setTimeout(() => {
+    setTimeout(() => {
             sendAIMessage(openings[customer.personality], customer.id, customer.name);
           }, index * 500); // Stagger messages by 500ms
         });
@@ -430,7 +430,7 @@ RESPOND NOW as 1-3 random customers (format: "Name: message"):`;
         });
       } else {
         // Basic mode or single response
-        sendAIMessage(aiResponse);
+      sendAIMessage(aiResponse);
       }
       
       // Check if conversation should end (if AI mentions interest or refusing strongly)
