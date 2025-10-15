@@ -17,7 +17,7 @@ const modules: Omit<Module, 'id'>[] = [
     { title: "Product Strategy", description: "Design your product strategy.", path: "/product-strategy", icon: Package, category: "Labs" },
     { title: "Pricing Lab", description: "Set your pricing strategy.", path: "/pricing-lab", icon: DollarSign, category: "Labs" },
     { title: "Promotion Lab", description: "Plan your promotional campaign.", path: "/promotion-lab", icon: Megaphone, category: "Labs" },
-    { title: "Sales Challenge", description: "Practice your sales skills.", path: "/sales-challenge", icon: Zap, category: "Advanced" },
+    { title: "Product Promotion Campaign", description: "Practice your marketing skills.", path: "/promotion-campaign", icon: Zap, category: "Advanced" },
 ];
 
 const Dashboard: React.FC = () => {
@@ -96,8 +96,8 @@ const Dashboard: React.FC = () => {
                                     </span>
                                     <span className="text-white/90 text-xs sm:text-sm">Only 20% Win Rate!</span>
                                 </div>
-                                <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-2">AI Sales Challenge</h2>
-                                <p className="text-white/90 text-sm sm:text-base lg:text-lg mb-1">Face a brutal AI buyer. Sell ANYTHING you want.</p>
+                                <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-2">Product Promotion Campaign</h2>
+                                <p className="text-white/90 text-sm sm:text-base lg:text-lg mb-1">Master marketing with AI customers. Promote ANYTHING you want.</p>
                                 <p className="text-white/80 text-xs sm:text-sm">Practice your real products • Get instant feedback</p>
                             </div>
                             <div className="flex-shrink-0 self-center sm:self-auto">
