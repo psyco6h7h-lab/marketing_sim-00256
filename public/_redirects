@@ -1,0 +1,6 @@
+# Redirect all routes to index.html for SPA
+/*    /index.html   200
+
+# Force fresh content
+/assets/*.js    /assets/*.js   200!    Content-Type: application/javascript; charset=utf-8
+/assets/*.css   /assets/*.css  200!    Content-Type: text/css; charset=utf-8

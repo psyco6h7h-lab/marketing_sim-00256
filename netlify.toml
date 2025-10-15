@@ -65,12 +65,26 @@
     Content-Type = "text/css; charset=utf-8"
     Cache-Control = "no-cache, no-store, must-revalidate"
 
-# Fix MIME types for assets
+# Fix MIME types for assets - JavaScript files
 [[headers]]
-  for = "/assets/*"
+  for = "/assets/*.js"
   [headers.values]
     Content-Type = "application/javascript; charset=utf-8"
     Cache-Control = "no-cache, no-store, must-revalidate"
+
+# Fix MIME types for assets - CSS files
+[[headers]]
+  for = "/assets/*.css"
+  [headers.values]
+    Content-Type = "text/css; charset=utf-8"
+    Cache-Control = "no-cache, no-store, must-revalidate"
+
+# Override Netlify's default behavior for all assets
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+    X-Content-Type-Options = "nosniff"
 
 [[headers]]
   for = "/index.html"
